@@ -1,0 +1,10 @@
+{
+  "name": "vlcouch-e2e",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test --config e2e/playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}

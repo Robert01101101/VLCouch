@@ -1,0 +1,18 @@
+---
+description: Testing requirements — run tests after backend, frontend, or UI flow changes
+globs:
+  - backend/**
+  - frontend/**
+  - e2e/**
+alwaysApply: false
+---
+
+# Testing rules
+
+- After **backend** changes: `.\scripts\test.ps1 -Layer api`
+- After **frontend component** changes: `.\scripts\test.ps1 -Layer unit`
+- After **UI flow** changes: `.\scripts\test.ps1 -Layer e2e`
+- Before finishing any task: `.\scripts\test.ps1 -Layer all`
+- Add tests with new features (see AGENTS.md)
+- Tests must use `APP_ENV=test`; never depend on the developer's real media library
+- Load the matching skill from `.cursor/skills/verify-*` for detailed steps

@@ -1,0 +1,3 @@
+# Keep fixture media files in git
+!.gitkeep
+!**/*.mkv

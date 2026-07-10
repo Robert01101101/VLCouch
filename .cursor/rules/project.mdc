@@ -1,0 +1,14 @@
+---
+description: VLCouch project conventions — stack, layout, and dev commands
+globs:
+alwaysApply: true
+---
+
+# Project conventions
+
+- Python backend in `backend/app/`; routers in `backend/app/routers/`
+- React frontend in `frontend/src/`; plain JavaScript (no TypeScript)
+- Config via `.env` at repo root; never commit `.env`
+- Use `.\dev.ps1` for local dev; `.\scripts\test.ps1` to verify changes
+- Windows-first: PowerShell scripts, VLC registry detection, backslash-safe SQLite paths in `db.py`
+- Keep changes minimal; match existing naming and patterns in surrounding code

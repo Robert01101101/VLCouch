@@ -1,0 +1,24 @@
+---
+description: Require data-testid on new interactive UI elements for agent and Playwright selectors
+globs:
+  - frontend/src/**
+alwaysApply: false
+---
+
+# Selector conventions
+
+Add `data-testid` to new interactive elements:
+
+| Element | Pattern |
+|---------|---------|
+| Page loading/error | `page-loading`, `page-error`, `page-empty` |
+| Rescan button | `rescan-library` |
+| Browse row | `browse-row-{rowId}` |
+| Poster card | `poster-card-{type}-{id}` |
+| Play on card | `{cardTestId}-play` |
+| Episode play | `play-episode-{id}` |
+| Up-next play | `play-up-next` |
+| Watched checkbox | `watched-episode-{id}` |
+| Show detail page | `show-detail` |
+
+Prefer `data-testid` over text or CSS selectors in Playwright specs.
