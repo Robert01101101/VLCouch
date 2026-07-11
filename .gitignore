@@ -38,3 +38,4 @@ blob-report/
 *.log
 Thumbs.db
 .DS_Store
+*.lnk
