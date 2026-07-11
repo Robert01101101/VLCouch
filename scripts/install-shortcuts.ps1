@@ -40,9 +40,9 @@ function New-AppShortcut([string]$path) {
     $shortcut.WorkingDirectory = $root
     $shortcut.Description = "Browse and play your local media library"
 
-    $vlc = "${env:ProgramFiles}\VideoLAN\VLC\vlc.exe"
-    if (Test-Path $vlc) {
-        $shortcut.IconLocation = "$vlc,0"
+    $icon = Join-Path $root "vlcouch.ico"
+    if (Test-Path $icon) {
+        $shortcut.IconLocation = $icon
     } else {
         $shortcut.IconLocation = "$env:SystemRoot\System32\imageres.dll,184"
     }
