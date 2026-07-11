@@ -58,6 +58,21 @@ export async function setWatchStatus(itemType, itemId, watched) {
   return res.json()
 }
 
+export async function setSeasonWatchStatus(showId, season, watched) {
+  const res = await fetch(`${API_BASE}/api/shows/${showId}/seasons/${season}/watch-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ watched }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    const err = new Error(data.detail || 'Failed to update season watch status')
+    err.status = res.status
+    throw err
+  }
+  return res.json()
+}
+
 export async function triggerScan() {
   const res = await fetch(`${API_BASE}/api/scan`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to start scan')

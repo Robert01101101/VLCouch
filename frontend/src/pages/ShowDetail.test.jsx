@@ -68,4 +68,38 @@ describe('ShowDetail', () => {
       expect(api.fetchShow).toHaveBeenCalledTimes(2)
     })
   })
+
+  it('calls setSeasonWatchStatus when mark all watched clicked', async () => {
+    api.setSeasonWatchStatus.mockResolvedValue({ watched: true, updated_count: 2 })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('mark-season-1-watched'))
+    await waitFor(() => {
+      expect(api.setSeasonWatchStatus).toHaveBeenCalledWith(1, 1, true)
+    })
+  })
+
+  it('calls setSeasonWatchStatus when mark all unwatched clicked', async () => {
+    api.setSeasonWatchStatus.mockResolvedValue({ watched: false, updated_count: 2 })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('mark-season-1-unwatched'))
+    await waitFor(() => {
+      expect(api.setSeasonWatchStatus).toHaveBeenCalledWith(1, 1, false)
+    })
+  })
+
+  it('falls back to per-episode updates when bulk season endpoint is missing', async () => {
+    const bulkError = new Error('Failed to update season watch status')
+    bulkError.status = 405
+    api.setSeasonWatchStatus.mockRejectedValue(bulkError)
+    api.setWatchStatus.mockResolvedValue({ watched: true })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('mark-season-1-watched'))
+    await waitFor(() => {
+      expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 10, true)
+      expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 11, true)
+    })
+  })
 })

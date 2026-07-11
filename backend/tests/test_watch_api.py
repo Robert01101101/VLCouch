@@ -35,3 +35,47 @@ def test_continue_watching(client):
     assert items[0]["title"] == "Breaking Bad"
     assert items[0]["watched_count"] == 1
     assert items[0]["total_episodes"] == 2
+
+
+def test_update_season_watch_status(client):
+    show_id = client.seed_data["show_id"]
+    response = client.post(
+        f"/api/shows/{show_id}/seasons/1/watch-status",
+        json={"watched": True},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["watched"] is True
+    assert data["updated_count"] == 2
+
+    show = client.get(f"/api/shows/{show_id}").json()
+    for season in show["seasons"]:
+        for ep in season["episodes"]:
+            assert ep["watched"] is True
+
+    response = client.post(
+        f"/api/shows/{show_id}/seasons/1/watch-status",
+        json={"watched": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 2
+
+    show = client.get(f"/api/shows/{show_id}").json()
+    for season in show["seasons"]:
+        for ep in season["episodes"]:
+            assert ep["watched"] is False
+
+
+def test_update_season_watch_status_not_found(client):
+    show_id = client.seed_data["show_id"]
+    response = client.post(
+        f"/api/shows/{show_id}/seasons/99/watch-status",
+        json={"watched": True},
+    )
+    assert response.status_code == 404
+
+    response = client.post(
+        "/api/shows/99999/seasons/1/watch-status",
+        json={"watched": True},
+    )
+    assert response.status_code == 404

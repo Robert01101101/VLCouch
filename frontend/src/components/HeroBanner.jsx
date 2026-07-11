@@ -48,8 +48,15 @@ export default function HeroBanner({ hero, onPlayed }) {
       ) : (
         <div className="absolute inset-0 bg-couch-gray" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-couch-black via-couch-black/60 to-couch-black/20" />
-      <div className="absolute inset-0 bg-gradient-to-r from-couch-black/90 via-couch-black/40 to-transparent" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            'linear-gradient(to top, #141414 0%, rgb(20 20 20 / 0.6) 24%, rgb(20 20 20 / 0.22) 40%, rgb(20 20 20 / 0) 55%)',
+            'linear-gradient(to top right, rgb(20 20 20 / 0.82) 0%, rgb(20 20 20 / 0.28) 32%, rgb(20 20 20 / 0) 58%)',
+          ].join(', '),
+        }}
+      />
 
       <div className="relative h-full flex flex-col justify-end px-6 sm:px-12 lg:px-16 pb-10 sm:pb-14 max-w-3xl">
         <p className="text-sm font-medium text-gray-300 mb-2 drop-shadow">

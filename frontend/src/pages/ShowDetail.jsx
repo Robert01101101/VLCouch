@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchShow, playItem, setWatchStatus } from '../api'
+import { fetchShow, playItem, setSeasonWatchStatus, setWatchStatus } from '../api'
 
 export default function ShowDetail() {
   const { id } = useParams()
   const [show, setShow] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [seasonUpdating, setSeasonUpdating] = useState(null)
 
   async function loadShow() {
     try {
@@ -39,6 +40,25 @@ export default function ShowDetail() {
       await loadShow()
     } catch (e) {
       alert(e.message)
+    }
+  }
+
+  async function handleSeasonWatchStatus(season, watched) {
+    setSeasonUpdating(season.season)
+    try {
+      try {
+        await setSeasonWatchStatus(show.id, season.season, watched)
+      } catch (e) {
+        if (e.status !== 404 && e.status !== 405) throw e
+        await Promise.all(
+          season.episodes.map((ep) => setWatchStatus('episode', ep.id, watched))
+        )
+      }
+      await loadShow()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setSeasonUpdating(null)
     }
   }
 
@@ -108,9 +128,31 @@ export default function ShowDetail() {
 
       {show.seasons.map((season) => (
         <section key={season.season} className="mb-8">
-          <h2 className="text-lg font-semibold mb-3 text-gray-300">
-            Season {season.season}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 className="text-lg font-semibold text-gray-300">
+              Season {season.season}
+            </h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                data-testid={`mark-season-${season.season}-watched`}
+                disabled={seasonUpdating === season.season}
+                onClick={() => handleSeasonWatchStatus(season, true)}
+                className="text-xs text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 px-3 py-1 rounded transition-colors disabled:opacity-50"
+              >
+                Mark all watched
+              </button>
+              <button
+                type="button"
+                data-testid={`mark-season-${season.season}-unwatched`}
+                disabled={seasonUpdating === season.season}
+                onClick={() => handleSeasonWatchStatus(season, false)}
+                className="text-xs text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 px-3 py-1 rounded transition-colors disabled:opacity-50"
+              >
+                Mark all unwatched
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             {season.episodes.map((ep) => {
               const isUpNext = upNext && upNext.id === ep.id

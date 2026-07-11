@@ -6,7 +6,7 @@ $root = $PSScriptRoot
 $port = 8000
 $hostAddr = "127.0.0.1"
 $baseUrl = "http://${hostAddr}:$port"
-$uvicorn = Join-Path $root "backend\.venv\Scripts\uvicorn.exe"
+$python = Join-Path $root "backend\.venv\Scripts\python.exe"
 
 function Show-Error([string]$message) {
     Add-Type -AssemblyName System.Windows.Forms
@@ -16,6 +16,16 @@ function Show-Error([string]$message) {
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Warning
     )
+}
+
+function Exit-WithError([string]$message) {
+    Show-Error $message
+    exit 2
+}
+
+trap {
+    Show-Error "Unexpected error while starting VLCouch:`n`n$($_.Exception.Message)"
+    exit 1
 }
 
 function Test-ServerReady {
@@ -50,35 +60,34 @@ function Start-AppServer {
     Remove-Item Env:TEST_MEDIA_ROOTS -ErrorAction SilentlyContinue
     Remove-Item Env:TEST_POSTERS_DIR -ErrorAction SilentlyContinue
 
-    if (-not (Test-Path $uvicorn)) {
-        Show-Error @"
+    if (-not (Test-Path $python)) {
+        Exit-WithError @"
 Python environment is not set up.
 
 Run this once from the project folder:
   .\scripts\install-shortcuts.ps1
 "@
-        exit 1
     }
 
     if (-not (Test-Path (Join-Path $root "frontend\dist\index.html"))) {
-        Show-Error @"
+        Exit-WithError @"
 Frontend build is missing.
 
 Run this once from the project folder:
   .\scripts\install-shortcuts.ps1
 "@
-        exit 1
     }
 
     if (Test-PortListening) {
         if (-not (Wait-ServerReady -timeoutSec 30)) {
-            Show-Error "Port $port is in use, but VLCouch did not respond.`nClose the other program or change the port."
-            exit 1
+            Exit-WithError "Port $port is in use, but VLCouch did not respond.`nClose the other program or change the port."
         }
         return
     }
 
-    Start-Process -FilePath $uvicorn -ArgumentList @(
+    # uvicorn.exe can exit immediately on Windows; python -m uvicorn is reliable.
+    Start-Process -FilePath $python -ArgumentList @(
+        "-m", "uvicorn",
         "app.main:app",
         "--host", $hostAddr,
         "--port", "$port",
@@ -86,8 +95,7 @@ Run this once from the project folder:
     ) -WorkingDirectory $root -WindowStyle Hidden | Out-Null
 
     if (-not (Wait-ServerReady -timeoutSec 60)) {
-        Show-Error "The server did not start in time.`nCheck that Python and dependencies are installed."
-        exit 1
+        Exit-WithError "The server did not start in time.`nCheck that Python and dependencies are installed."
     }
 }
 

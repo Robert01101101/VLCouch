@@ -20,6 +20,10 @@ Guide for AI agents implementing and verifying changes in this repo.
 | E2E tests only | `.\scripts\test.ps1 -Layer e2e` |
 | Manual scan smoke | `cd backend; python scripts/smoke_scan.py` |
 
+## Commit messages
+
+Before committing, use the **generate-commit-message** skill (`.cursor/skills/generate-commit-message/`) to draft a human-readable subject, summary, and outcome-focused bullets from the diff.
+
 ## Verification checklist
 
 After every feature change:

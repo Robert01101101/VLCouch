@@ -37,7 +37,7 @@ Click **VLCouch** to start the server (if needed) and open your browser at http:
 
 ```powershell
 cd frontend; npm run build; cd ..
-backend\.venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
+backend\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
 ```
 
 Then open http://localhost:8000
