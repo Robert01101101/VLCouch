@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from sqlmodel import Session
+
 import app.thumbnails as thumbnails
 from app.models import Movie
-from sqlmodel import Session
 
 
 def test_pick_seek_seconds_uses_skip_and_percentage(monkeypatch):

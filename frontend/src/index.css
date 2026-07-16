@@ -8,7 +8,7 @@ body {
 }
 
 ::selection {
-  background-color: rgba(229, 9, 20, 0.35);
+  background-color: rgba(220, 102, 2, 0.35);
   color: #fff;
 }
 

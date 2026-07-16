@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import HeroBanner from '../components/HeroBanner'
 import Row from '../components/Row'
 import { fetchBrowse, playItem } from '../api'
+import { browseMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
 export default function Home({ refreshKey = 0 }) {
   const location = useLocation()
@@ -24,9 +25,24 @@ export default function Home({ refreshKey = 0 }) {
     }
   }
 
+  const refreshThumbnails = useCallback(async () => {
+    try {
+      const data = await fetchBrowse()
+      setHero(data.hero ?? null)
+      setRows(data.rows || [])
+    } catch {
+      // Keep current content if a background poll fails.
+    }
+  }, [])
+
   useEffect(() => {
     loadData()
   }, [refreshKey, location.key])
+
+  usePollForThumbnails(
+    !loading && browseMissingThumbnails({ hero, rows }),
+    refreshThumbnails
+  )
 
   async function handlePlayMovie(movie) {
     try {
@@ -85,7 +101,7 @@ export default function Home({ refreshKey = 0 }) {
       {!hasContent && (
         <div className="text-center py-20 text-gray-400 px-6 max-w-7xl mx-auto" data-testid="page-empty">
           <p className="mb-2">No media found.</p>
-          <p className="text-sm">Configure MEDIA_ROOTS in .env and click Rescan Library.</p>
+          <p className="text-sm">Configure MEDIA_ROOTS in .env and rescan the library in Settings.</p>
         </div>
       )}
 

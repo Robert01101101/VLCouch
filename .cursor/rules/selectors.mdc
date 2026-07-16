@@ -11,14 +11,36 @@ Add `data-testid` to new interactive elements:
 
 | Element | Pattern |
 |---------|---------|
-| Page loading/error | `page-loading`, `page-error`, `page-empty` |
+| Page loading/error/empty | `page-loading`, `page-error`, `page-empty` |
+| Nav home | `nav-home` |
+| Nav settings | `nav-settings` |
+| Hero banner | `hero-banner` |
+| Hero play button | `hero-play` |
+| Library search input | `library-search` |
+| Search results dropdown | `search-results` |
+| Search result row | `search-result-{type}-{id}` |
+| Settings page | `settings-page` |
+| Wikipedia toggle | `settings-wikipedia-toggle` |
+| Auto thumbnails toggle | `settings-auto-thumbnails-toggle` |
+| Scan on startup toggle | `settings-scan-on-startup-toggle` |
+| Settings version | `settings-version` |
+| GitHub link | `settings-github-link` |
 | Rescan button | `rescan-library` |
-| Browse row | `browse-row-{rowId}` |
+| Browse row section | `browse-row-{slug}` |
+| Browse row scroll container | `browse-row-scroll-{slug}` |
 | Poster card | `poster-card-{type}-{id}` |
-| Play on card | `{cardTestId}-play` |
+| Poster watch progress bar | `{cardTestId}-progress` |
 | Episode play | `play-episode-{id}` |
 | Up-next play | `play-up-next` |
+| Mark season watched | `mark-season-{n}-watched` |
+| Mark season unwatched | `mark-season-{n}-unwatched` |
 | Watched checkbox | `watched-episode-{id}` |
 | Show detail page | `show-detail` |
+
+Notes:
+
+- `{cardTestId}` defaults to `poster-card-{type}-{id}`; movie cards with `onPlay` use the card id as the play button (no `-play` suffix).
+- `{slug}` is the row identifier from the browse API (e.g. `recently-watched`, `movies-2010s`).
+- `{type}` is `movie` or `show`; `{id}` is the database id.
 
 Prefer `data-testid` over text or CSS selectors in Playwright specs.

@@ -16,8 +16,9 @@ def test_play_episode(client):
     assert data["status"] == "ok"
     assert data["item_type"] == "episode"
 
-    import app.db as db
     from sqlmodel import Session, select
+
+    import app.db as db
     from app.models import WatchProgress
 
     with Session(db.engine) as session:

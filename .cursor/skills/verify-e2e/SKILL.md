@@ -31,9 +31,10 @@ description: Run Playwright E2E browser tests to verify UI flows end-to-end. Use
 
 | Spec | Flow |
 |------|------|
-| `home.spec.ts` | Home loads → browse rows visible → rescan button works |
-| `show-detail.spec.ts` | Click show poster → detail page → toggle watched |
-| `play.spec.ts` | Hover movie card → Play (TEST_MODE skips VLC) |
+| `home.spec.ts` | Home loads → browse rows visible → search → hero play (TEST_MODE skips VLC) |
+| `show-detail.spec.ts` | Click show poster → detail page → toggle watched → mark season watched |
+| `play.spec.ts` | Click movie card → Play (TEST_MODE skips VLC) |
+| `settings.spec.ts` | Settings page loads → toggles, version, rescan button |
 
 ## Self-correction loop
 

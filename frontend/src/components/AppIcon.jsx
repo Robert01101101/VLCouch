@@ -8,7 +8,7 @@ export default function AppIcon({ className = 'h-8 w-8' }) {
       aria-hidden="true"
     >
       <rect width="32" height="32" rx="6" fill="#141414" />
-      <path d="M12 8.5v15l11-7.5-11-7.5z" fill="#e50914" />
+      <path d="M12 8.5v15l11-7.5-11-7.5z" fill="#DC6602" />
     </svg>
   )
 }

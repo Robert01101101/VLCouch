@@ -8,15 +8,16 @@ from sqlmodel import Session, select
 
 from app.config import MEDIA_ROOTS, ROW_ITEM_LIMIT
 from app.db import get_session
+from app import settings_store
 from app.genre_tags import TOP_GENRE_ROW_LIMIT, genre_row_id, parse_genres_json, top_movie_genres
+from app.models import Episode, Movie, Show, WatchProgress
+from app.scanner import extract_tv_category, movie_decade
 from app.thumbnail_service import (
     queue_browse_poster_backfill,
     queue_hero_thumbnail,
     queue_watched_thumbnail_backfill,
 )
 from app.thumbnails import poster_public_url
-from app.models import Episode, Movie, Show, WatchProgress
-from app.scanner import extract_tv_category, movie_decade
 
 router = APIRouter(prefix="/api", tags=["library"])
 
@@ -189,7 +190,7 @@ def browse_home(
     _backfill_show_categories(session)
     queue_watched_thumbnail_backfill(background_tasks, limit=5)
     hero = _hero_item(session)
-    if hero:
+    if hero and not settings_store.auto_generate_thumbnails():
         queue_hero_thumbnail(hero, background_tasks)
     rows = []
 
@@ -280,54 +281,64 @@ def browse_home(
 
 @router.get("/shows/{show_id}")
 def get_show(show_id: int, session: Session = Depends(get_session)):
-    show = session.get(Show, show_id)
-    if not show:
-        raise HTTPException(status_code=404, detail="Show not found")
+    try:
+        show = session.get(Show, show_id)
+        if not show:
+            raise HTTPException(status_code=404, detail="Show not found")
 
-    from app.metadata import enrich_show
+        # Avoid circular import by importing inside the function
+        from app.metadata import enrich_show
 
-    enrich_show(session, show)
-    session.refresh(show)
+        enrich_show(session, show)
+        session.refresh(show)
 
-    episodes = session.exec(
-        select(Episode)
-        .where(Episode.show_id == show_id)
-        .order_by(Episode.season, Episode.episode)
-    ).all()
+        episodes = session.exec(
+            select(Episode)
+            .where(Episode.show_id == show_id)
+            .order_by(Episode.season, Episode.episode)
+        ).all()
 
-    seasons: dict[int, list] = {}
-    for ep in episodes:
-        progress = session.exec(
-            select(WatchProgress).where(
-                WatchProgress.item_type == "episode",
-                WatchProgress.item_id == ep.id,
-            )
-        ).first()
-        watched = progress.watched if progress else False
+        seasons: dict[int, list] = {}
+        for ep in episodes:
+            progress = session.exec(
+                select(WatchProgress).where(
+                    WatchProgress.item_type == "episode",
+                    WatchProgress.item_id == ep.id,
+                )
+            ).first()
+            watched = progress.watched if progress else False
 
-        ep_data = {
-            "id": ep.id,
-            "season": ep.season,
-            "episode": ep.episode,
-            "title": ep.title,
-            "watched": watched,
-            "has_subtitles": ep.subtitle_path is not None,
+            ep_data = {
+                "id": ep.id,
+                "season": ep.season,
+                "episode": ep.episode,
+                "title": ep.title,
+                "watched": watched,
+                "has_subtitles": ep.subtitle_path is not None,
+                "thumbnail_url": _poster_url(ep.thumbnail_path) if ep.thumbnail_path else None,
+            }
+            seasons.setdefault(ep.season, []).append(ep_data)
+
+        season_list = [
+            {"season": season_num, "episodes": eps}
+            for season_num, eps in sorted(seasons.items())
+        ]
+
+        return {
+            "id": show.id,
+            "title": show.title,
+            "overview": show.overview,
+            "poster_url": _poster_url(show.poster_path),
+            "category": show.category,
+            "seasons": season_list,
         }
-        seasons.setdefault(ep.season, []).append(ep_data)
-
-    season_list = [
-        {"season": season_num, "episodes": eps}
-        for season_num, eps in sorted(seasons.items())
-    ]
-
-    return {
-        "id": show.id,
-        "title": show.title,
-        "overview": show.overview,
-        "poster_url": _poster_url(show.poster_path),
-        "category": show.category,
-        "seasons": season_list,
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the actual error for debugging
+        import logging
+        logging.exception("Error fetching show %d: %s", show_id, str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/continue-watching")

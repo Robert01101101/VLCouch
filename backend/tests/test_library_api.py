@@ -199,8 +199,9 @@ def test_browse_hero_movie_when_movie_watched_last(client):
 
 def test_browse_hero_ignores_null_last_watched_at(client):
     """Rows with null last_watched_at must not shadow real watch history."""
-    import app.db as db
     from sqlmodel import Session
+
+    import app.db as db
     from app.models import WatchProgress
 
     movie_id = client.seed_data["movie_id"]
@@ -239,8 +240,9 @@ def test_browse_hero_updates_when_episode_marked_watched(client):
 
 
 def test_browse_hero_uses_episode_after_last_watched_not_first_gap(client):
-    import app.db as db
     from sqlmodel import Session
+
+    import app.db as db
     from app.models import Episode
 
     show_id = client.seed_data["show_id"]

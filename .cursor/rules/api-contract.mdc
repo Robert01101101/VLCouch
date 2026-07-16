@@ -1,0 +1,34 @@
+---
+description: Keep API endpoint paths in sync between backend routers and frontend api.js
+globs:
+  - backend/app/routers/**
+  - frontend/src/api.js
+alwaysApply: false
+---
+
+# API contract
+
+Routers use `APIRouter(prefix="/api")`. The route path in `@router.get("/foo")` becomes `/api/foo` in `api.js`.
+
+When adding or renaming an endpoint, update **both** the router and `frontend/src/api.js`.
+
+## Current endpoints
+
+| Method | Path | Router | api.js function |
+|--------|------|--------|-----------------|
+| GET | `/api/health` | `main.py` | — (not called from UI) |
+| GET | `/api/browse` | `library.py` | `fetchBrowse` |
+| GET | `/api/movies` | `library.py` | `fetchMovies` |
+| GET | `/api/shows` | `library.py` | `fetchShows` |
+| GET | `/api/shows/{id}` | `library.py` | `fetchShow` |
+| GET | `/api/search` | `library.py` | `searchLibrary` |
+| GET | `/api/continue-watching` | `library.py` | `fetchContinueWatching` |
+| POST | `/api/play/{item_type}/{item_id}` | `play.py` | `playItem` |
+| POST | `/api/watch-status/{item_type}/{item_id}` | `watch.py` | `setWatchStatus` |
+| POST | `/api/shows/{show_id}/seasons/{season}/watch-status` | `watch.py` | `setSeasonWatchStatus` |
+| POST | `/api/scan` | `main.py` | `triggerScan` |
+| GET | `/api/scan/status` | `main.py` | `fetchScanStatus` |
+| GET | `/api/settings` | `settings.py` | `fetchSettings` |
+| PATCH | `/api/settings` | `settings.py` | `updateSettings` |
+
+Poster images are served at `/posters/{filename}` (static mount in `main.py`); URLs appear in API response fields like `thumbnail_url`, not as separate api.js calls.

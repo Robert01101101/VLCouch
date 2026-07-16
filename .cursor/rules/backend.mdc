@@ -1,0 +1,16 @@
+---
+description: Backend conventions — FastAPI routers, DB session, scanner, and tests
+globs:
+  - backend/**
+alwaysApply: false
+---
+
+# Backend conventions
+
+- FastAPI routers live in `backend/app/routers/`; register them in `main.py`
+- Use `from app.db import get_session` and `import app.db as db` — use `db.engine` after test overrides, NOT `from app.db import engine`
+- `TEST_MODE=true` skips VLC launch and thumbnail background jobs
+- Return response dicts from routers; SQLModel models in `models.py`
+- File parsing in `scanner.py`; scan orchestration in `library_scan.py`
+- Thumbnails: `thumbnails.py` (cache/extract), `thumbnail_service.py` (queue), `thumbnail_jobs.py` (generation)
+- Keep changes minimal; add tests in `backend/tests/`

@@ -1,22 +1,17 @@
 import logging
-import re
 from urllib.parse import quote
 
 import httpx
 from sqlmodel import Session
 
-from app.config import METADATA_ENABLED
 from app.models import Movie, Show
+from app.settings_store import metadata_enabled
 
 logger = logging.getLogger(__name__)
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 WIKI_REST = "https://en.wikipedia.org/api/rest_v1/page/summary"
 USER_AGENT = "VLCouch/1.0 (personal local media app)"
-
-
-def metadata_enabled() -> bool:
-    return METADATA_ENABLED
 
 
 def _search_page_title(query: str) -> str | None:
@@ -92,8 +87,14 @@ def enrich_movie(session: Session, movie: Movie) -> None:
 def enrich_show(session: Session, show: Show) -> None:
     if show.overview:
         return
-    overview = lookup_overview(show.title, "tv")
-    if overview:
-        show.overview = overview
-        session.add(show)
-        session.commit()
+    try:
+        overview = lookup_overview(show.title, "tv")
+        if overview:
+            show.overview = overview
+            session.add(show)
+            session.commit()
+    except Exception as e:
+        # Log the error but don't fail the entire request
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("Error enriching show %d (%s): %s", show.id, show.title, str(e))

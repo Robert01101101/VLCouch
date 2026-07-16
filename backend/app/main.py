@@ -4,11 +4,15 @@ from contextlib import asynccontextmanager
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.config import FRONTEND_DIST, MEDIA_ROOTS, POSTERS_DIR, SCAN_ON_STARTUP
-from app.thumbnails import ensure_thumbnail_cache_current_on_startup
-from app.db import init_db
+from sqlmodel import Session as DBSession
+
+import app.db as db
+from app import settings_store
+from app.config import FRONTEND_DIST, MEDIA_ROOTS, POSTERS_DIR
 from app.library_scan import scan_library
-from app.routers import library, play, watch
+from app.routers import library, play, settings, watch
+from app.thumbnail_service import queue_all_thumbnails_backfill
+from app.thumbnails import ensure_thumbnail_cache_current_on_startup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,32 +21,41 @@ _scan_state: dict = {"running": False, "last_stats": None}
 
 
 def _run_scan():
-    from app.db import engine
     from sqlmodel import Session as DBSession
 
     _scan_state["running"] = True
     try:
         logger.info("Starting full library scan (no file limit)...")
-        with DBSession(engine) as session:
+        with DBSession(db.engine) as session:
             stats = scan_library(session, MEDIA_ROOTS, limit=0)
         _scan_state["last_stats"] = stats
         logger.info("Scan complete: %s", stats)
+        if settings_store.auto_generate_thumbnails():
+            queue_all_thumbnails_backfill()
     finally:
         _scan_state["running"] = False
 
 
 def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
     """Create a FastAPI app. Tests pass lifespan_scan=False to skip startup scan."""
-    scan_on_startup = SCAN_ON_STARTUP if lifespan_scan is None else lifespan_scan
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        init_db()
+        db.init_db()
+        with DBSession(db.engine) as session:
+            settings_store.init_settings(session)
         ensure_thumbnail_cache_current_on_startup()
-        if scan_on_startup:
+        should_scan = (
+            settings_store.scan_on_startup()
+            if lifespan_scan is None
+            else lifespan_scan
+        )
+        if should_scan:
             _run_scan()
         else:
             logger.info("Skipping startup scan")
+            if settings_store.auto_generate_thumbnails():
+                queue_all_thumbnails_backfill()
         yield
 
     application = FastAPI(title="VLCouch", lifespan=lifespan)
@@ -57,6 +70,7 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
 
     application.include_router(library.router)
     application.include_router(play.router)
+    application.include_router(settings.router)
     application.include_router(watch.router)
 
     application.mount("/posters", StaticFiles(directory=str(POSTERS_DIR)), name="posters")

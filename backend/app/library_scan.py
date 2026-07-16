@@ -4,8 +4,8 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 from app.config import SCAN_LIMIT
-from app.models import Episode, Movie, Show
 from app.genre_tags import extract_movie_genres, serialize_genres
+from app.models import Episode, Movie, Show
 from app.scanner import (
     extract_show_title_from_path,
     extract_tv_category,

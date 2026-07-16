@@ -4,14 +4,14 @@ import os
 os.environ["APP_ENV"] = "test"
 os.environ["TEST_MODE"] = "true"
 
-import app.db as db
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel
+from tests.fixtures.seed import seed_library
 
+import app.db as db
 from app import models  # noqa: F401
 from app.main import create_app
-from tests.fixtures.seed import seed_library
 
 
 @pytest.fixture

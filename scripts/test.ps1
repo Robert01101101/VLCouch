@@ -11,9 +11,11 @@ function Ensure-BackendVenv {
     if (-not (Test-Path "$projectRoot\backend\.venv")) {
         Write-Host "Creating Python virtual environment..." -ForegroundColor Yellow
         python -m venv "$projectRoot\backend\.venv"
-        & "$projectRoot\backend\.venv\Scripts\pip" install -r "$projectRoot\backend\requirements.txt"
+        & "$projectRoot\backend\.venv\Scripts\python" -m pip install --disable-pip-version-check -r "$projectRoot\backend\requirements.txt"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
-    & "$projectRoot\backend\.venv\Scripts\pip" install -q -r "$projectRoot\backend\requirements-dev.txt"
+    & "$projectRoot\backend\.venv\Scripts\python" -m pip install -q --disable-pip-version-check -r "$projectRoot\backend\requirements-dev.txt"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 function Run-ApiTests {
@@ -23,7 +25,7 @@ function Run-ApiTests {
     $env:TEST_MODE = "true"
     Push-Location "$projectRoot\backend"
     try {
-        & ".\.venv\Scripts\pytest" tests -q
+        & ".\.venv\Scripts\python" -m pytest tests -q
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     } finally {
         Pop-Location

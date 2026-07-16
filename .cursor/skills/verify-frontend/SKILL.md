@@ -28,9 +28,12 @@ After changes to `frontend/src/components/`, `frontend/src/pages/`, or `frontend
 | File | Covers |
 |------|--------|
 | `PosterCard.test.jsx` | card render, play button |
+| `HeroBanner.test.jsx` | hero content, play button, playItem callback |
 | `Row.test.jsx` | row title, cards, empty state |
-| `Home.test.jsx` | loading, error, browse rows |
-| `ShowDetail.test.jsx` | episodes, watched toggle |
+| `SearchBar.test.jsx` | search input, results display |
+| `Home.test.jsx` | loading, error, browse rows, hero banner |
+| `ShowDetail.test.jsx` | episodes, watched toggle, season bulk watch |
+| `Settings.test.jsx` | settings page, toggles, rescan |
 
 ## Self-correction loop
 

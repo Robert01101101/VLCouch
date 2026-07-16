@@ -29,10 +29,12 @@ After any change under `backend/app/` — routers, models, scanner, config, VLC/
 | File | Covers |
 |------|--------|
 | `test_health.py` | `GET /api/health` |
-| `test_library_api.py` | browse, movies, shows, show detail |
-| `test_watch_api.py` | watch-status, continue-watching |
+| `test_library_api.py` | browse, movies, shows, show detail, search |
+| `test_watch_api.py` | watch-status, season watch-status, continue-watching |
 | `test_play_api.py` | play endpoint, TEST_MODE VLC skip |
-| `test_scanner.py` | scan_library against fixture media |
+| `test_settings_api.py` | GET/PATCH settings |
+| `test_thumbnails.py` | thumbnail cache, seek logic, cache version |
+| `test_scanner.py` | scan_library against fixture media (see `verify-scanner` skill) |
 
 ## Self-correction loop
 

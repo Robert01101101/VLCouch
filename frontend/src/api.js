@@ -100,3 +100,19 @@ export async function waitForScanComplete({
   }
   throw new Error('Scan timed out')
 }
+
+export async function fetchSettings() {
+  const res = await fetch(`${API_BASE}/api/settings`)
+  if (!res.ok) throw new Error('Failed to fetch settings')
+  return res.json()
+}
+
+export async function updateSettings(patch) {
+  const res = await fetch(`${API_BASE}/api/settings`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
+  if (!res.ok) throw new Error('Failed to update settings')
+  return res.json()
+}

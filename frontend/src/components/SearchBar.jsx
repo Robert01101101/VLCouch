@@ -46,7 +46,7 @@ export default function SearchBar() {
   }
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className="relative w-full">
       <input
         type="search"
         data-testid="library-search"
@@ -55,7 +55,7 @@ export default function SearchBar() {
         onFocus={() => results.length > 0 && setOpen(true)}
         onBlur={handleBlur}
         placeholder="Search movies and shows..."
-        className="w-full bg-couch-gray/80 border border-gray-600 rounded px-4 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-gray-400"
+        className="w-full bg-couch-gray/80 border border-gray-600 rounded px-4 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-gray-400 min-w-[350px] flex-grow shrink-0"
       />
       {open && (
         <div

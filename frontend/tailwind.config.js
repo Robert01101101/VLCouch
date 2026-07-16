@@ -6,7 +6,9 @@ export default {
       colors: {
         couch: {
           black: '#141414',
-          red: '#e50914',
+          red: '#DC6602',
+          'red-dark': '#BA5402',
+          'red-light': '#E87A22',
           gray: '#2f2f2f',
         },
       },

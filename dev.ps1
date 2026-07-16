@@ -19,10 +19,10 @@ if (-not (Test-Path "$root\frontend\node_modules")) {
     Pop-Location
 }
 
-# Start backend
+# Start backend with proper environment for development mode
 Start-Process powershell -ArgumentList @(
     "-NoExit", "-Command",
-    "cd '$root'; & backend\.venv\Scripts\uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir backend"
+    "cd '$root'; $env:APP_ENV='development'; & backend\.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir backend"
 )
 
 # Start frontend

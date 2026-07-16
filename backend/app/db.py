@@ -1,5 +1,6 @@
-from sqlalchemy import text
 from pathlib import Path
+
+from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import DB_PATH

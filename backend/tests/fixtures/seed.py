@@ -2,9 +2,9 @@
 import json
 from datetime import datetime
 
-import app.db as db
 from sqlmodel import Session
 
+import app.db as db
 from app.models import Episode, Movie, Show, WatchProgress
 
 FIXTURE_MOVIE_PATH = "c:/fixtures/movies/The Matrix (1999).mkv"

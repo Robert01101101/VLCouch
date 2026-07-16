@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Routes, Route, useLocation, Link } from 'react-router-dom'
 import Home from './pages/Home'
 import ShowDetail from './pages/ShowDetail'
+import Settings from './pages/Settings'
 import SearchBar from './components/SearchBar'
 import { triggerScan, waitForScanComplete } from './api'
 
@@ -24,19 +25,26 @@ export default function App() {
     }
   }
 
+  const isDevMode = import.meta.env.MODE === 'development' || import.meta.env.APP_ENV === 'development';
+
   return (
-    <div className="min-h-screen bg-couch-black">
+    <div className={isDevMode ? "min-h-screen bg-couch-black" : "min-h-screen bg-couch-black"}>
       <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-md px-6 py-3">
         <div className="flex items-center justify-between gap-6 max-w-[1920px] mx-auto">
           {isHome ? (
-            <button
-              data-testid="rescan-library"
-              onClick={handleScan}
-              disabled={scanning}
-              className="text-sm text-gray-300 hover:text-white transition-colors disabled:opacity-50 shrink-0"
+            <Link
+              to="https://github.com/Robert01101101/VLCouch"
+              target="_blank"
+              className="flex items-center gap-2"
             >
-              {scanning ? 'Scanning...' : 'Rescan Library'}
-            </button>
+              <img src="/vlcouch.svg" alt="VLCouch Icon" className="h-6 w-6" />
+              <span className="font-bold text-white">VLCouch</span>
+              {isDevMode && (
+                <span className="ml-2 px-2 py-1 bg-couch-red-dark text-white text-xs rounded">
+                  Dev
+                </span>
+              )}
+            </Link>
           ) : (
             <Link
               to="/"
@@ -44,9 +52,23 @@ export default function App() {
               className="text-sm text-gray-300 hover:text-white transition-colors shrink-0"
             >
               ← Home
+              {isDevMode && (
+                <span className="ml-2 px-2 py-1 bg-couch-red-dark text-white text-xs rounded">
+                  Dev
+                </span>
+              )}
             </Link>
           )}
-          <SearchBar />
+          <div className="flex items-center gap-3">
+            <Link
+              to="/settings"
+              data-testid="nav-settings"
+              className="text-sm text-gray-300 hover:text-white transition-colors shrink-0"
+            >
+              Settings
+            </Link>
+            <SearchBar />
+          </div>
         </div>
       </header>
       <main>
@@ -57,6 +79,14 @@ export default function App() {
             element={
               <div className="px-6 max-w-7xl mx-auto py-8">
                 <ShowDetail />
+              </div>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <div className="px-6 max-w-7xl mx-auto py-8">
+                <Settings scanning={scanning} onScan={handleScan} />
               </div>
             }
           />

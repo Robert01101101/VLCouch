@@ -1,0 +1,14 @@
+---
+description: Frontend conventions — React, api.js, Tailwind, and component tests
+globs:
+  - frontend/src/**
+alwaysApply: false
+---
+
+# Frontend conventions
+
+- Plain JavaScript — no TypeScript
+- API calls only via `frontend/src/api.js` (never inline `fetch` in components)
+- Tailwind for styling; match existing layout and color patterns
+- Add `data-testid` on new interactive elements (see `selectors.mdc`)
+- Component tests: mock api with `vi.mock('../api')` (or relative path to `api.js`); wrap routed components in `<MemoryRouter>`

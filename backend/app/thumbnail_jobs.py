@@ -1,10 +1,9 @@
 import logging
-from pathlib import Path
 
 from sqlmodel import Session
 
 from app.models import Episode, Movie, Show
-from app.thumbnails import extract_thumbnail, is_valid_poster_path
+from app.thumbnails import extract_thumbnail, get_or_extract_thumbnail, is_valid_poster_path
 
 logger = logging.getLogger(__name__)
 
@@ -48,3 +47,16 @@ def generate_show_thumbnail_for_show(session: Session, show_id: int) -> None:
     ).first()
     if episode:
         generate_show_thumbnail(session, episode.id)
+
+
+def generate_episode_thumbnail(session: Session, episode_id: int) -> None:
+    episode = session.get(Episode, episode_id)
+    if not episode:
+        return
+    if is_valid_poster_path(episode.thumbnail_path):
+        return
+    thumb = get_or_extract_thumbnail(episode.file_path, f"episode_{episode.id}")
+    if thumb:
+        episode.thumbnail_path = thumb
+        session.add(episode)
+        session.commit()

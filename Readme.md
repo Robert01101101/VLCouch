@@ -1,118 +1,167 @@
 # VLCouch
 
-A lean-back browser for local media files. Scans your movie and TV folders, organizes them into browseable rows, and hands off playback to VLC.
+**Browse your local movies and TV like a streaming app — play them in VLC.**
 
-VLCouch is an independent, open-source project and is not affiliated with, endorsed by, or sponsored by VideoLAN or the VLC media player project.
+VLCouch scans folders on your PC, builds poster rows and a “what to watch next” hero, and launches [VLC](https://www.videolan.org/) when you hit Play. No accounts, no cloud library, no transcoding. Your files stay on your drives.
 
-**Windows-first** — VLC path detection, PowerShell scripts, and playback use the Windows VLC install. Other platforms are not supported yet.
+> **Windows-first** — built for Windows (PowerShell, VLC registry detection). Other platforms are not supported yet.  
+> VLCouch is independent open source and is not affiliated with VideoLAN or the VLC project.
 
-## Requirements
+---
 
-- **Python 3** (backend)
-- **Node.js** (frontend dev/build and tests)
-- **[VLC](https://www.videolan.org/)** — auto-detected from the registry or `Program Files`; override with `VLC_PATH` in `.env`
-- **[ffmpeg](https://ffmpeg.org/)** — on your PATH for thumbnails (or set `FFMPEG_PATH` in `.env`). Windows: `winget install ffmpeg`
+## Why use it?
 
-## Quick start
+If you keep movies and TV on external drives or a NAS mount, you already have the hard part — the files. VLCouch adds the couch experience:
 
-1. Copy `.env.example` to `.env` and set `MEDIA_ROOTS` to your movie and TV folder paths.
-2. Run the dev servers (creates a Python venv and installs npm deps on first run):
-   ```powershell
-   .\dev.ps1
-   ```
-3. Open http://localhost:5173
-4. Click **Rescan Library** on the home page to import your files (scans do not run automatically unless `SCAN_ON_STARTUP=true`).
+- **Lean-back browsing** — poster rows, search, show seasons, and a hero banner for “continue watching” or “watch again”
+- **Stays local** — offline by default; thumbnails come from your own video files, not the internet
+- **VLC playback** — full codec support and subtitle auto-detection (`.srt` / `.vtt` beside the file or in `Subs` folders)
+- **Simple watch tracking** — playing marks an item watched; TV cards show progress across episodes
+- **Your folders, your rules** — point at any movie/TV roots; rescan when you add new files
 
-## Desktop shortcut (recommended)
+---
 
-One-time setup — builds the app and adds Desktop + Start menu shortcuts:
+## How to use it
+
+1. **Install** — Python 3, Node.js, [VLC](https://www.videolan.org/), and [ffmpeg](https://ffmpeg.org/) (`winget install ffmpeg` on Windows).
+2. **Configure** — copy `.env.example` to `.env` and set `MEDIA_ROOTS` to your movie and TV paths.
+3. **Run** — `.\dev.ps1` for development, or `.\scripts\install-shortcuts.ps1` for a Desktop shortcut (recommended).
+4. **Import** — open **Settings** → **Rescan Library** to scan your folders.
+5. **Browse & play** — pick from the home rows or search bar; VLC opens the file.
+
+For day-to-day use after setup, bookmark http://127.0.0.1:8000 (production shortcut) or http://localhost:5173 (dev). The server remembers watch history and thumbnails under `backend/data/`.
+
+---
+
+## Features
+
+| | |
+|---|---|
+| **Home** | Hero (up next / watch again), Recently Watched, TV by folder theme, movies by decade, top genres |
+| **Shows** | Seasons, episodes, up-next play, per-episode and season watched toggles |
+| **Search** | Movies and shows from the header bar |
+| **Settings** | Rescan, scan-on-startup, thumbnail mode, optional Wikipedia plot summaries |
+| **Thumbnails** | Extracted locally via ffmpeg (~3 min in, past logos); all-media backfill on by default |
+| **Privacy** | Fully offline unless you enable Wikipedia text on show pages |
+
+Optional **genre rows** for movies: add sidecar tag files like `1917 (2019) - Drama - War.txt` next to the video — see [Movie genre tags](#movie-genre-tags) below.
+
+---
+
+## Get started
+
+### Development
+
+```powershell
+# 1. Configure media paths
+copy .env.example .env
+# Edit MEDIA_ROOTS in .env
+
+# 2. Start backend + frontend (creates venv and installs deps on first run)
+.\dev.ps1
+```
+
+Open http://localhost:5173 → **Settings** → **Rescan Library**.
+
+Scans do not run on startup unless you enable **Automatically rescan on startup** in Settings (or `SCAN_ON_STARTUP=true` in `.env`).
+
+### Desktop shortcut (recommended)
+
+One-time setup — builds the frontend and adds Desktop + Start menu shortcuts:
 
 ```powershell
 .\scripts\install-shortcuts.ps1
 ```
 
-Click **VLCouch** to start the server (if needed) and open your browser at http://127.0.0.1:8000. Bookmark that URL for quick access while the server is already running.
+Click **VLCouch** to start the server and open http://127.0.0.1:8000.
 
-## Production (manual)
+### Production (manual)
 
 ```powershell
 cd frontend; npm run build; cd ..
 backend\.venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir backend
 ```
 
-Then open http://localhost:8000
+Then open http://localhost:8000.
 
-## Features
-
-- Scans local movie/TV folders using `guessit` filename parsing
-- **Hero banner** — suggests the next unwatched episode (or a movie to watch again)
-- **Home page rows** — Recently Watched; top movie genres (from sidecar tag files); TV grouped by folder theme; movies grouped by decade
-- **Search** — find movies and shows from the header search bar
-- **Show detail** — seasons and episodes, up-next play, per-episode watched checkboxes
-- **Thumbnails from your video files** (via ffmpeg) — generated lazily when you play or mark something watched; skips ~3 minutes past the start to avoid studio logos and title cards
-- Optional Wikipedia plot summaries on detail pages (`METADATA_ENABLED=true`, text only, no API key)
-- Poster-row browse UI with capped row length (`ROW_ITEM_LIMIT`)
-- VLC playback with automatic subtitle detection (`.srt` / `.vtt` beside the video or in `Subs` folders)
-- Manual watched tracking (playing an item marks it watched)
+---
 
 ## Configuration
 
-Settings live in `.env` at the repo root. See `.env.example` for all options:
+### Settings page
+
+Runtime toggles (saved in `backend/data/library.db` — no restart needed):
+
+| Toggle | What it does |
+|--------|----------------|
+| **Rescan Library** | Full scan of all `MEDIA_ROOTS` |
+| **Automatically rescan on startup** | Scan when the server starts |
+| **Generate thumbnails for all media** | Background posters for the whole library (default on). Off = thumbnails on play/mark-watched only |
+| **Wikipedia plot summaries** | Fetch plot text on show detail pages |
+
+### Environment (`.env`)
+
+Requires a server restart. See `.env.example` for defaults.
 
 | Variable | Purpose |
 |----------|---------|
-| `MEDIA_ROOTS` | JSON array of `{"path": "...", "type": "movies"\|"tv"}` roots |
-| `METADATA_ENABLED` | `true` to fetch Wikipedia plot text on detail pages |
-| `THUMBNAIL_SKIP_SECONDS` | Seconds into the file before grabbing a thumbnail frame (default `180`) |
-| `ROW_ITEM_LIMIT` | Max posters per home-page row (default `30`) |
-| `SCAN_LIMIT` | Max files scanned per root during limited scans (`0` = no limit) |
-| `SCAN_ON_STARTUP` | `true` to scan when the server starts (default `false`) |
-| `VLC_PATH` | Optional override for `vlc.exe` |
-| `FFMPEG_PATH` | Optional override for `ffmpeg.exe` |
+| `MEDIA_ROOTS` | JSON array: `[{"path":"D:/Movies","type":"movies"},{"path":"D:/TV","type":"tv"}]` |
+| `METADATA_ENABLED` | Initial default for Wikipedia summaries |
+| `SCAN_ON_STARTUP` | Initial default for startup scans |
+| `THUMBNAIL_SKIP_SECONDS` | Seconds before thumbnail frame grab (default `180`) |
+| `ROW_ITEM_LIMIT` | Max posters per home row (default `30`) |
+| `SCAN_LIMIT` | Cap files per root for manual scan scripts only (`0` = no limit). Server rescan ignores this |
+| `VLC_PATH` | Override path to `vlc.exe` |
+| `FFMPEG_PATH` | Override path to `ffmpeg.exe` |
 
-Test-specific overrides are documented in `.env.test.example`. Automated tests never use your real `MEDIA_ROOTS` or `library.db`.
+---
 
-## Movie genre tags (optional)
+## Movie genre tags
 
-For extra home-page rows, add sidecar tag files next to each movie video:
+Add a small text file next to a movie to tag genres — the top five become home-page rows:
 
 ```
-Movie Folder/Title (Year) - Genre - Genre.txt
+Movie Folder/Title (Year) - Drama - War.txt
+Movie Folder/28 Days Later - Horror.nfo
 ```
 
-Examples: `1917 (2019) - Drama - War.txt`, `28 Days Later - Horror.nfo`. Tags are parsed on scan; the top five genres become browse rows. Torrent readme files (RARBG, YIFY, etc.) are ignored.
-
-To inspect your library and preview genre counts:
+Torrent readme files (RARBG, YIFY, etc.) are ignored. Preview counts:
 
 ```powershell
 cd backend
 python scripts/inventory_movies_folder.py
 ```
 
-## Internet usage
+---
 
-**By default, fully offline.** The only optional online feature is Wikipedia text summaries when you open a show/movie detail page (`METADATA_ENABLED=true`). Thumbnails are always extracted locally from your video files — nothing is downloaded from the internet for images.
+## Thumbnails & privacy
 
-## Thumbnails
+- **Thumbnails** — ffmpeg grabs a frame from your video (~3 minutes in, or 30% of runtime). Cached under `backend/data/posters/`.
+- **All-media mode** (Settings, default on) backfills posters on startup and after rescan. Turn off for on-demand only.
+- **Offline** — no network use unless Wikipedia summaries are enabled. No API keys, no TMDB, no image downloads.
 
-Thumbnails are generated when you play or mark an item as watched, using a frame from ~3 minutes in (or 30% of runtime, whichever is greater). Bump `THUMBNAIL_CACHE_VERSION` in `backend/app/thumbnails.py` when changing extraction settings to invalidate old cache files automatically on next startup.
+Developers: bump `THUMBNAIL_CACHE_VERSION` in `backend/app/thumbnails.py` to invalidate old cache after changing extraction settings.
 
-Cached thumbnails and the library database are stored under `backend/data/` (gitignored).
+---
 
-## Testing with a large library
+## Large libraries
 
-Set `SCAN_LIMIT` in `.env` to cap how many video files are processed **per media root** during dev smoke tests (e.g. `SCAN_LIMIT=50`). Production uses `0` (no limit). **Rescan Library** always scans the full library regardless of `SCAN_LIMIT`.
+Use `SCAN_LIMIT=50` in `.env` when running manual scan scripts (`cd backend; python scripts/smoke_scan.py`) for a quick smoke test. The live server and **Rescan Library** always scan everything.
 
-## Testing
+---
+
+## For developers
 
 ```powershell
-.\scripts\test.ps1              # full suite: API + unit + E2E
-.\scripts\test.ps1 -Layer api   # backend pytest only
-.\scripts\test.ps1 -Layer unit  # frontend Vitest only
-.\scripts\test.ps1 -Layer e2e   # Playwright browser tests
+.\scripts\test.ps1              # full suite
+.\scripts\test.ps1 -Layer api   # backend pytest
+.\scripts\test.ps1 -Layer unit  # frontend Vitest
+.\scripts\test.ps1 -Layer e2e   # Playwright
 ```
 
-See [AGENTS.md](AGENTS.md) for the agent verification workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidelines and [AGENTS.md](AGENTS.md) for architecture and file map. API docs: http://localhost:8000/docs when the backend is running.
+
+---
 
 ## License
 

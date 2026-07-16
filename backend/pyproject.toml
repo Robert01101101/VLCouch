@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = [
+    "E501",  # line length handled by formatter, not enforced strictly
+    "B008",  # FastAPI Depends() in defaults is intentional
+    "B904",  # existing exception chaining style
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
