@@ -8,7 +8,7 @@ from sqlmodel import Session as DBSession
 
 import app.db as db
 from app import settings_store
-from app.config import FRONTEND_DIST, MEDIA_ROOTS, POSTERS_DIR
+from app.config import FRONTEND_DIST, POSTERS_DIR
 from app.library_scan import scan_library
 from app.routers import library, play, settings, watch
 from app.thumbnail_service import queue_all_thumbnails_backfill
@@ -27,7 +27,7 @@ def _run_scan():
     try:
         logger.info("Starting full library scan (no file limit)...")
         with DBSession(db.engine) as session:
-            stats = scan_library(session, MEDIA_ROOTS, limit=0)
+            stats = scan_library(session, settings_store.media_roots(), limit=0)
         _scan_state["last_stats"] = stats
         logger.info("Scan complete: %s", stats)
         if settings_store.auto_generate_thumbnails():

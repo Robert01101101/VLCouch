@@ -1,23 +1,29 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import HeroBanner from '../components/HeroBanner'
 import Row from '../components/Row'
-import { fetchBrowse, playItem } from '../api'
+import SetupWizard from '../components/SetupWizard'
+import { fetchBrowse, fetchMediaRoots, playItem } from '../api'
 import { browseMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
-export default function Home({ refreshKey = 0 }) {
+export default function Home({ refreshKey = 0, scanning = false, onScan }) {
   const location = useLocation()
   const [hero, setHero] = useState(null)
   const [rows, setRows] = useState([])
+  const [mediaRoots, setMediaRoots] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   async function loadData() {
     try {
       setError(null)
-      const data = await fetchBrowse()
-      setHero(data.hero ?? null)
-      setRows(data.rows || [])
+      const [browseData, mediaRootsData] = await Promise.all([
+        fetchBrowse(),
+        fetchMediaRoots(),
+      ])
+      setHero(browseData.hero ?? null)
+      setRows(browseData.rows || [])
+      setMediaRoots(mediaRootsData.roots || [])
     } catch (e) {
       setError(e.message)
     } finally {
@@ -76,11 +82,25 @@ export default function Home({ refreshKey = 0 }) {
   }
 
   const hasContent = hero || rows.some((row) => row.items?.length > 0)
+  const needsSetup = mediaRoots !== null && mediaRoots.length === 0
 
   if (loading) {
     return (
       <div className="text-center py-20 text-gray-400" data-testid="page-loading">
         Loading library...
+      </div>
+    )
+  }
+
+  if (needsSetup) {
+    return (
+      <div className="px-6 py-10 max-w-7xl mx-auto">
+        <SetupWizard
+          roots={mediaRoots}
+          onRootsChange={setMediaRoots}
+          scanning={scanning}
+          onScan={onScan}
+        />
       </div>
     )
   }
@@ -101,7 +121,16 @@ export default function Home({ refreshKey = 0 }) {
       {!hasContent && (
         <div className="text-center py-20 text-gray-400 px-6 max-w-7xl mx-auto" data-testid="page-empty">
           <p className="mb-2">No media found.</p>
-          <p className="text-sm">Configure MEDIA_ROOTS in .env and rescan the library in Settings.</p>
+          <p className="text-sm mb-4">
+            Check your folders in Settings, then rescan the library.
+          </p>
+          <Link
+            to="/settings"
+            data-testid="page-empty-settings-link"
+            className="text-sm text-couch-red hover:text-couch-red-light transition-colors"
+          >
+            Open Settings
+          </Link>
         </div>
       )}
 

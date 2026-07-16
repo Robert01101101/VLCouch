@@ -73,7 +73,7 @@ export default function App() {
       </header>
       <main>
         <Routes>
-          <Route path="/" element={<Home refreshKey={refreshKey} />} />
+          <Route path="/" element={<Home refreshKey={refreshKey} scanning={scanning} onScan={handleScan} />} />
           <Route
             path="/shows/:id"
             element={

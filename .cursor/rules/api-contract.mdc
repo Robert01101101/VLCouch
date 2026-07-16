@@ -26,9 +26,13 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | POST | `/api/play/{item_type}/{item_id}` | `play.py` | `playItem` |
 | POST | `/api/watch-status/{item_type}/{item_id}` | `watch.py` | `setWatchStatus` |
 | POST | `/api/shows/{show_id}/seasons/{season}/watch-status` | `watch.py` | `setSeasonWatchStatus` |
+| POST | `/api/shows/{show_id}/watch-status` | `watch.py` | `setShowWatchStatus` |
 | POST | `/api/scan` | `main.py` | `triggerScan` |
 | GET | `/api/scan/status` | `main.py` | `fetchScanStatus` |
 | GET | `/api/settings` | `settings.py` | `fetchSettings` |
 | PATCH | `/api/settings` | `settings.py` | `updateSettings` |
+| GET | `/api/media-roots` | `settings.py` | `fetchMediaRoots` |
+| PUT | `/api/media-roots` | `settings.py` | `updateMediaRoots` |
+| POST | `/api/media-roots/pick-folder` | `settings.py` | `pickMediaFolder` |
 
 Poster images are served at `/posters/{filename}` (static mount in `main.py`); URLs appear in API response fields like `thumbnail_url`, not as separate api.js calls.

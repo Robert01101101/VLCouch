@@ -272,3 +272,27 @@ def test_browse_hero_uses_episode_after_last_watched_not_first_gap(client):
     assert hero is not None
     assert hero["episode_id"] == ep4_id
     assert hero["episode"] == 4
+
+
+def test_get_show_queues_episode_thumbnails_when_auto_enabled(client):
+    from unittest.mock import ANY, patch
+
+    client.patch("/api/settings", json={"auto_generate_thumbnails": True})
+    show_id = client.seed_data["show_id"]
+
+    with patch("app.routers.library.queue_show_episode_thumbnails") as mock_queue:
+        response = client.get(f"/api/shows/{show_id}")
+        assert response.status_code == 200
+        mock_queue.assert_called_once_with(show_id, ANY)
+
+
+def test_get_show_skips_episode_thumbnails_when_auto_disabled(client):
+    from unittest.mock import patch
+
+    client.patch("/api/settings", json={"auto_generate_thumbnails": False})
+    show_id = client.seed_data["show_id"]
+
+    with patch("app.routers.library.queue_show_episode_thumbnails") as mock_queue:
+        response = client.get(f"/api/shows/{show_id}")
+        assert response.status_code == 200
+        mock_queue.assert_not_called()

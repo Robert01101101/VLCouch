@@ -73,6 +73,21 @@ export async function setSeasonWatchStatus(showId, season, watched) {
   return res.json()
 }
 
+export async function setShowWatchStatus(showId, watched) {
+  const res = await fetch(`${API_BASE}/api/shows/${showId}/watch-status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ watched }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    const err = new Error(data.detail || 'Failed to update show watch status')
+    err.status = res.status
+    throw err
+  }
+  return res.json()
+}
+
 export async function triggerScan() {
   const res = await fetch(`${API_BASE}/api/scan`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to start scan')
@@ -114,5 +129,32 @@ export async function updateSettings(patch) {
     body: JSON.stringify(patch),
   })
   if (!res.ok) throw new Error('Failed to update settings')
+  return res.json()
+}
+
+export async function fetchMediaRoots() {
+  const res = await fetch(`${API_BASE}/api/media-roots`)
+  if (!res.ok) throw new Error('Failed to fetch media folders')
+  return res.json()
+}
+
+export async function updateMediaRoots(roots) {
+  const res = await fetch(`${API_BASE}/api/media-roots`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roots }),
+  })
+  if (!res.ok) throw new Error('Failed to update media folders')
+  return res.json()
+}
+
+export async function pickMediaFolder() {
+  const res = await fetch(`${API_BASE}/api/media-roots/pick-folder`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || 'Failed to open folder picker')
+  }
   return res.json()
 }

@@ -86,3 +86,46 @@ def set_season_watch_status(
 
     session.commit()
     return updated_ids
+
+
+def set_show_watch_status(
+    session: Session,
+    show_id: int,
+    watched: bool,
+) -> list[int]:
+    """Mark every episode in a show as watched or unwatched."""
+    episodes = session.exec(
+        select(Episode).where(Episode.show_id == show_id)
+    ).all()
+    if not episodes:
+        return []
+
+    now = datetime.utcnow()
+    updated_ids: list[int] = []
+
+    for ep in episodes:
+        progress = session.exec(
+            select(WatchProgress).where(
+                WatchProgress.item_type == "episode",
+                WatchProgress.item_id == ep.id,
+            )
+        ).first()
+
+        if progress:
+            progress.watched = watched
+            if watched:
+                progress.last_watched_at = now
+            session.add(progress)
+        else:
+            session.add(
+                WatchProgress(
+                    item_type="episode",
+                    item_id=ep.id,
+                    watched=watched,
+                    last_watched_at=now if watched else None,
+                )
+            )
+        updated_ids.append(ep.id)
+
+    session.commit()
+    return updated_ids

@@ -79,3 +79,40 @@ def test_update_season_watch_status_not_found(client):
         json={"watched": True},
     )
     assert response.status_code == 404
+
+
+def test_update_show_watch_status(client):
+    show_id = client.seed_data["show_id"]
+    response = client.post(
+        f"/api/shows/{show_id}/watch-status",
+        json={"watched": True},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["watched"] is True
+    assert data["updated_count"] == 2
+
+    show = client.get(f"/api/shows/{show_id}").json()
+    for season in show["seasons"]:
+        for ep in season["episodes"]:
+            assert ep["watched"] is True
+
+    response = client.post(
+        f"/api/shows/{show_id}/watch-status",
+        json={"watched": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 2
+
+    show = client.get(f"/api/shows/{show_id}").json()
+    for season in show["seasons"]:
+        for ep in season["episodes"]:
+            assert ep["watched"] is False
+
+
+def test_update_show_watch_status_not_found(client):
+    response = client.post(
+        "/api/shows/99999/watch-status",
+        json={"watched": True},
+    )
+    assert response.status_code == 404

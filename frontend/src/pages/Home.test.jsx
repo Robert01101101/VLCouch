@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Home from './Home'
@@ -9,16 +9,29 @@ vi.mock('../api')
 describe('Home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    api.fetchMediaRoots.mockResolvedValue({ roots: [{ path: 'D:/Movies', type: 'movies' }] })
   })
 
   it('shows loading state', () => {
     api.fetchBrowse.mockReturnValue(new Promise(() => {}))
+    api.fetchMediaRoots.mockReturnValue(new Promise(() => {}))
     render(
       <MemoryRouter>
         <Home />
       </MemoryRouter>
     )
     expect(screen.getByTestId('page-loading')).toBeInTheDocument()
+  })
+
+  it('shows setup wizard when no media folders are configured', async () => {
+    api.fetchBrowse.mockResolvedValue({ hero: null, rows: [] })
+    api.fetchMediaRoots.mockResolvedValue({ roots: [] })
+    render(
+      <MemoryRouter>
+        <Home scanning={false} onScan={vi.fn()} />
+      </MemoryRouter>
+    )
+    expect(await screen.findByTestId('setup-wizard')).toBeInTheDocument()
   })
 
   it('shows error state', async () => {

@@ -6,11 +6,64 @@ $appName = "VLCouch"
 
 Write-Host "Setting up $appName..." -ForegroundColor Cyan
 
+function Test-CommandExists([string]$name) {
+    return $null -ne (Get-Command $name -ErrorAction SilentlyContinue)
+}
+
+function Test-VlcInstalled {
+    $paths = @(
+        "${env:ProgramFiles}\VideoLAN\VLC\vlc.exe",
+        "${env:ProgramFiles(x86)}\VideoLAN\VLC\vlc.exe"
+    )
+    foreach ($path in $paths) {
+        if (Test-Path $path) { return $true }
+    }
+    try {
+        $key = Get-ItemProperty -Path "HKLM:\SOFTWARE\VideoLAN\VLC" -ErrorAction Stop
+        if ($key.InstallDir -and (Test-Path (Join-Path $key.InstallDir "vlc.exe"))) {
+            return $true
+        }
+    } catch {
+        # VLC not in registry
+    }
+    return $false
+}
+
+$missing = @()
+if (-not (Test-CommandExists python)) {
+    $missing += "Python 3 — install from https://www.python.org/downloads/ or run: winget install Python.Python.3.12"
+}
+if (-not (Test-CommandExists npm)) {
+    $missing += "Node.js — install from https://nodejs.org/ or run: winget install OpenJS.NodeJS.LTS"
+}
+
+if ($missing.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Missing required software:" -ForegroundColor Red
+    foreach ($item in $missing) {
+        Write-Host "  - $item" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    Write-Host "Install the items above, then run Setup.bat again." -ForegroundColor Red
+    exit 1
+}
+
+if (-not (Test-CommandExists ffmpeg)) {
+    Write-Host "Warning: ffmpeg not found on PATH. Thumbnails will not work until you install it." -ForegroundColor Yellow
+    Write-Host "  Install with: winget install Gyan.FFmpeg" -ForegroundColor Yellow
+}
+
+if (-not (Test-VlcInstalled)) {
+    Write-Host "Warning: VLC not found. Playback will not work until you install it." -ForegroundColor Yellow
+    Write-Host "  Install from https://www.videolan.org/ or run: winget install VideoLAN.VLC" -ForegroundColor Yellow
+}
+
+Write-Host ""
 if (-not (Test-Path (Join-Path $root ".env"))) {
     $example = Join-Path $root ".env.example"
     if (Test-Path $example) {
         Copy-Item $example (Join-Path $root ".env")
-        Write-Host "Created .env from .env.example - edit MEDIA_ROOTS before browsing your library." -ForegroundColor Yellow
+        Write-Host "Created .env from .env.example — add media folders in Settings after launch." -ForegroundColor Yellow
     } else {
         Write-Host "Warning: no .env file found. Create one with your MEDIA_ROOTS." -ForegroundColor Yellow
     }

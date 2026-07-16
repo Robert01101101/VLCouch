@@ -6,7 +6,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import desc
 from sqlmodel import Session, select
 
-from app.config import MEDIA_ROOTS, ROW_ITEM_LIMIT
+from app import settings_store
+from app.config import ROW_ITEM_LIMIT
 from app.db import get_session
 from app import settings_store
 from app.genre_tags import TOP_GENRE_ROW_LIMIT, genre_row_id, parse_genres_json, top_movie_genres
@@ -15,6 +16,7 @@ from app.scanner import extract_tv_category, movie_decade
 from app.thumbnail_service import (
     queue_browse_poster_backfill,
     queue_hero_thumbnail,
+    queue_show_episode_thumbnails,
     queue_watched_thumbnail_backfill,
 )
 from app.thumbnails import poster_public_url
@@ -280,7 +282,11 @@ def browse_home(
 
 
 @router.get("/shows/{show_id}")
-def get_show(show_id: int, session: Session = Depends(get_session)):
+def get_show(
+    show_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
     try:
         show = session.get(Show, show_id)
         if not show:
@@ -323,6 +329,9 @@ def get_show(show_id: int, session: Session = Depends(get_session)):
             {"season": season_num, "episodes": eps}
             for season_num, eps in sorted(seasons.items())
         ]
+
+        if settings_store.auto_generate_thumbnails():
+            queue_show_episode_thumbnails(show_id, background_tasks)
 
         return {
             "id": show.id,
@@ -605,7 +614,7 @@ def _recently_watched_items(session: Session) -> list[dict]:
 
 
 def _tv_root() -> Path | None:
-    for root in MEDIA_ROOTS:
+    for root in settings_store.media_roots():
         if root.get("type") == "tv":
             return Path(root["path"])
     return None

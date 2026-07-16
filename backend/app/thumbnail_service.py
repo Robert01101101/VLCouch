@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from fastapi import BackgroundTasks
 from sqlalchemy import desc
@@ -9,45 +8,13 @@ from app import settings_store
 from app.config import TEST_MODE
 from app.models import Episode, Movie, Show, WatchProgress
 from app.thumbnail_jobs import (
-    generate_episode_thumbnail,
-    generate_movie_thumbnail,
-    generate_show_thumbnail,
-    generate_show_thumbnail_for_show,
+    generate_movie_thumbnail_standalone,
+    generate_show_thumbnail_for_show_standalone,
 )
+from app.thumbnail_worker import enqueue
 from app.thumbnails import needs_poster_regeneration
 
 logger = logging.getLogger(__name__)
-
-
-def _run_movie_thumbnail(movie_id: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        generate_movie_thumbnail(session, movie_id)
-
-
-def _run_show_thumbnail(episode_id: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        generate_show_thumbnail(session, episode_id)
-
-
-def _run_episode_hero_thumbnail(episode_id: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-    from app.thumbnails import get_or_extract_thumbnail
-
-    with DBSession(engine) as session:
-        episode = session.get(Episode, episode_id)
-        if not episode:
-            return
-        get_or_extract_thumbnail(episode.file_path, f"episode_{episode.id}")
 
 
 def queue_hero_thumbnail(hero: dict, background_tasks: BackgroundTasks) -> None:
@@ -56,38 +23,20 @@ def queue_hero_thumbnail(hero: dict, background_tasks: BackgroundTasks) -> None:
     if hero.get("item_type") == "episode":
         episode_id = hero.get("episode_id")
         if episode_id:
-            background_tasks.add_task(_run_episode_hero_thumbnail, episode_id)
+            enqueue("episode", episode_id)
     elif hero.get("item_type") == "movie":
         movie_id = hero.get("id")
         if movie_id:
-            background_tasks.add_task(_run_movie_thumbnail, movie_id)
+            enqueue("movie", movie_id)
 
 
 def queue_thumbnail(item_type: str, item_id: int, background_tasks: BackgroundTasks) -> None:
     if TEST_MODE:
         return
     if item_type == "movie":
-        background_tasks.add_task(_run_movie_thumbnail, item_id)
+        enqueue("movie", item_id)
     elif item_type == "episode":
-        background_tasks.add_task(_run_episode_thumbnail, item_id)
-
-
-def _run_backfill(limit: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        backfill_watched_thumbnails(session, limit=limit)
-
-
-def _run_show_poster_for_show(show_id: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        generate_show_thumbnail_for_show(session, show_id)
+        enqueue("episode", item_id)
 
 
 def queue_browse_poster_backfill(
@@ -108,16 +57,16 @@ def queue_browse_poster_backfill(
         if show_id in seen_shows or queued >= limit:
             return
         seen_shows.add(show_id)
-        background_tasks.add_task(_run_show_poster_for_show, show_id)
-        queued += 1
+        if enqueue("show_poster", show_id):
+            queued += 1
 
     def queue_movie(movie_id: int) -> None:
         nonlocal queued
         if movie_id in seen_movies or queued >= limit:
             return
         seen_movies.add(movie_id)
-        background_tasks.add_task(_run_movie_thumbnail, movie_id)
-        queued += 1
+        if enqueue("movie", movie_id):
+            queued += 1
 
     hero = browse_payload.get("hero")
     if hero:
@@ -144,73 +93,100 @@ def queue_browse_poster_backfill(
 def queue_watched_thumbnail_backfill(background_tasks: BackgroundTasks, limit: int = 10) -> None:
     if TEST_MODE or settings_store.auto_generate_thumbnails():
         return
-    background_tasks.add_task(_run_backfill, limit)
+    enqueue("watched", limit)
 
 
-def backfill_watched_thumbnails(session: Session, limit: int = 10) -> int:
+def backfill_watched_thumbnails(limit: int = 10) -> int:
     """Generate thumbnails for watched items that don't have one yet."""
-    progress_list = session.exec(
-        select(WatchProgress)
-        .where(WatchProgress.watched == True)  # noqa: E712
-        .order_by(desc(WatchProgress.last_watched_at))
-    ).all()
+    import app.db as db
+
+    with Session(db.engine) as session:
+        progress_list = session.exec(
+            select(WatchProgress)
+            .where(WatchProgress.watched == True)  # noqa: E712
+            .order_by(desc(WatchProgress.last_watched_at))
+        ).all()
+
+        jobs: list[tuple[str, int]] = []
+        seen_shows: set[int] = set()
+
+        for progress in progress_list:
+            if len(jobs) >= limit:
+                break
+
+            if progress.item_type == "movie":
+                movie = session.get(Movie, progress.item_id)
+                if movie and needs_poster_regeneration(movie.poster_path):
+                    jobs.append(("movie", movie.id))
+
+            elif progress.item_type == "episode":
+                episode = session.get(Episode, progress.item_id)
+                if not episode or episode.show_id in seen_shows:
+                    continue
+                show = session.get(Show, episode.show_id)
+                if show and needs_poster_regeneration(show.poster_path):
+                    jobs.append(("show_poster", show.id))
+                    seen_shows.add(show.id)
 
     generated = 0
-    seen_shows: set[int] = set()
-
-    for progress in progress_list:
-        if generated >= limit:
-            break
-
-        if progress.item_type == "movie":
-            movie = session.get(Movie, progress.item_id)
-            if movie and needs_poster_regeneration(movie.poster_path):
-                generate_movie_thumbnail(session, movie.id)
+    for job_type, job_id in jobs:
+        if job_type == "movie":
+            if generate_movie_thumbnail_standalone(job_id):
                 generated += 1
-
-        elif progress.item_type == "episode":
-            episode = session.get(Episode, progress.item_id)
-            if not episode or episode.show_id in seen_shows:
-                continue
-            show = session.get(Show, episode.show_id)
-            if show and needs_poster_regeneration(show.poster_path):
-                generate_show_thumbnail(session, episode.id)
-                seen_shows.add(show.id)
-                generated += 1
-
+        elif job_type == "show_poster":
+            with Session(db.engine) as session:
+                if generate_show_thumbnail_for_show_standalone(session, job_id):
+                    generated += 1
     return generated
 
 
-def backfill_all_thumbnails(session: Session) -> dict:
-    """Generate missing thumbnails for every movie, show, and episode."""
-    stats = {"movies": 0, "shows": 0, "episodes": 0}
+def backfill_library_thumbnails() -> dict:
+    """Generate missing movie posters and show tile thumbnails (not episodes)."""
+    import app.db as db
 
-    for movie in session.exec(select(Movie)).all():
-        if needs_poster_regeneration(movie.poster_path):
-            generate_movie_thumbnail(session, movie.id)
+    with Session(db.engine) as session:
+        movie_ids = [
+            movie.id
+            for movie in session.exec(select(Movie)).all()
+            if needs_poster_regeneration(movie.poster_path)
+        ]
+        show_ids = [
+            show.id
+            for show in session.exec(select(Show)).all()
+            if needs_poster_regeneration(show.poster_path)
+        ]
+
+    stats = {"movies": 0, "shows": 0}
+    for movie_id in movie_ids:
+        if generate_movie_thumbnail_standalone(movie_id):
             stats["movies"] += 1
 
-    for show in session.exec(select(Show)).all():
-        if needs_poster_regeneration(show.poster_path):
-            generate_show_thumbnail_for_show(session, show.id)
-            stats["shows"] += 1
-
-    for episode in session.exec(select(Episode)).all():
-        if needs_poster_regeneration(episode.thumbnail_path):
-            generate_episode_thumbnail(session, episode.id)
-            stats["episodes"] += 1
+    for show_id in show_ids:
+        with Session(db.engine) as session:
+            if generate_show_thumbnail_for_show_standalone(session, show_id):
+                stats["shows"] += 1
 
     return stats
 
 
-def _run_all_thumbnails_backfill() -> None:
-    from sqlmodel import Session as DBSession
+def backfill_show_episode_thumbnails(session: Session, show_id: int) -> int:
+    """Generate missing episode thumbnails for a single show."""
+    from app.thumbnail_jobs import generate_episode_thumbnail_standalone
 
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        stats = backfill_all_thumbnails(session)
-    logger.info("Auto thumbnail backfill complete: %s", stats)
+    episode_ids = [
+        ep.id
+        for ep in session.exec(
+            select(Episode)
+            .where(Episode.show_id == show_id)
+            .order_by(Episode.season, Episode.episode)
+        ).all()
+        if needs_poster_regeneration(ep.thumbnail_path)
+    ]
+    generated = 0
+    for episode_id in episode_ids:
+        if generate_episode_thumbnail_standalone(episode_id):
+            generated += 1
+    return generated
 
 
 def queue_all_thumbnails_backfill(
@@ -218,16 +194,14 @@ def queue_all_thumbnails_backfill(
 ) -> None:
     if TEST_MODE or not settings_store.auto_generate_thumbnails():
         return
-    if background_tasks is not None:
-        background_tasks.add_task(_run_all_thumbnails_backfill)
-    else:
-        threading.Thread(target=_run_all_thumbnails_backfill, daemon=True).start()
+    enqueue("library")
 
 
-def _run_episode_thumbnail(episode_id: int) -> None:
-    from sqlmodel import Session as DBSession
-
-    from app.db import engine
-
-    with DBSession(engine) as session:
-        generate_episode_thumbnail(session, episode_id)
+def queue_show_episode_thumbnails(
+    show_id: int,
+    background_tasks: BackgroundTasks,
+) -> None:
+    """Generate episode thumbnails when a show detail page is opened."""
+    if TEST_MODE:
+        return
+    enqueue("show_episodes", show_id)

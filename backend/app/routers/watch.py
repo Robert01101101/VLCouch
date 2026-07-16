@@ -4,8 +4,8 @@ from sqlmodel import Session, select
 
 from app.db import get_session
 from app.models import Episode, Show
-from app.thumbnail_service import queue_thumbnail
-from app.watch_service import set_season_watch_status, set_watch_status
+from app.thumbnail_service import queue_show_episode_thumbnails, queue_thumbnail
+from app.watch_service import set_season_watch_status, set_show_watch_status, set_watch_status
 
 router = APIRouter(prefix="/api", tags=["watch"])
 
@@ -54,7 +54,31 @@ def update_season_watch_status(
     episode_ids = set_season_watch_status(session, show_id, season, body.watched)
 
     if body.watched:
-        for episode_id in episode_ids:
-            queue_thumbnail("episode", episode_id, background_tasks)
+        queue_show_episode_thumbnails(show_id, background_tasks)
+
+    return {"status": "ok", "watched": body.watched, "updated_count": len(episode_ids)}
+
+
+@router.post("/shows/{show_id}/watch-status")
+def update_show_watch_status(
+    show_id: int,
+    body: WatchStatusUpdate,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    show = session.get(Show, show_id)
+    if not show:
+        raise HTTPException(status_code=404, detail="Show not found")
+
+    has_episode = session.exec(
+        select(Episode.id).where(Episode.show_id == show_id)
+    ).first()
+    if not has_episode:
+        raise HTTPException(status_code=404, detail="Show has no episodes")
+
+    episode_ids = set_show_watch_status(session, show_id, body.watched)
+
+    if body.watched:
+        queue_show_episode_thumbnails(show_id, background_tasks)
 
     return {"status": "ok", "watched": body.watched, "updated_count": len(episode_ids)}

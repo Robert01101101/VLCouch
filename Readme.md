@@ -24,12 +24,13 @@ If you keep movies and TV on external drives or a NAS mount, you already have th
 ## How to use it
 
 1. **Install** — Python 3, Node.js, [VLC](https://www.videolan.org/), and [ffmpeg](https://ffmpeg.org/) (`winget install ffmpeg` on Windows).
-2. **Configure** — copy `.env.example` to `.env` and set `MEDIA_ROOTS` to your movie and TV paths.
-3. **Run** — `.\dev.ps1` for development, or `.\scripts\install-shortcuts.ps1` for a Desktop shortcut (recommended).
-4. **Import** — open **Settings** → **Rescan Library** to scan your folders.
-5. **Browse & play** — pick from the home rows or search bar; VLC opens the file.
+2. **Run setup** — double-click `Setup.bat` (or `.\scripts\install-shortcuts.ps1`) to install dependencies and create shortcuts.
+3. **Launch** — click the **VLCouch** Desktop shortcut; your browser opens automatically.
+4. **Add folders** — on first launch, use the setup screen to browse for your movie and TV folders (or add them later in **Settings**).
+5. **Import** — click **Scan library** (or **Settings** → **Rescan Library**) to import your files.
+6. **Browse & play** — pick from the home rows or search bar; VLC opens the file.
 
-For day-to-day use after setup, bookmark http://127.0.0.1:8000 (production shortcut) or http://localhost:5173 (dev). The server remembers watch history and thumbnails under `backend/data/`.
+For day-to-day use after setup, bookmark http://127.0.0.1:8000. The server remembers watch history, media folders, and thumbnails under `backend/data/`. Optional `.env` values still work as defaults on first run — see [Configuration](#configuration).
 
 ---
 
@@ -67,13 +68,15 @@ Scans do not run on startup unless you enable **Automatically rescan on startup*
 
 ### Desktop shortcut (recommended)
 
-One-time setup — builds the frontend and adds Desktop + Start menu shortcuts:
+One-time setup — installs dependencies, builds the frontend, and adds Desktop + Start menu shortcuts:
 
 ```powershell
-.\scripts\install-shortcuts.ps1
+.\Setup.bat
 ```
 
-Click **VLCouch** to start the server and open http://127.0.0.1:8000.
+Or from PowerShell: `.\scripts\install-shortcuts.ps1`
+
+Click **VLCouch** to start the server and open http://127.0.0.1:8000. Add your media folders in the app (first-run wizard or **Settings**).
 
 ### Production (manual)
 
@@ -94,7 +97,8 @@ Runtime toggles (saved in `backend/data/library.db` — no restart needed):
 
 | Toggle | What it does |
 |--------|----------------|
-| **Rescan Library** | Full scan of all `MEDIA_ROOTS` |
+| **Media folders** | Add or remove movie and TV library paths (saved in the app database) |
+| **Rescan Library** | Full scan of all configured media folders |
 | **Automatically rescan on startup** | Scan when the server starts |
 | **Generate thumbnails for all media** | Background posters for the whole library (default on). Off = thumbnails on play/mark-watched only |
 | **Wikipedia plot summaries** | Fetch plot text on show detail pages |
@@ -105,7 +109,7 @@ Requires a server restart. See `.env.example` for defaults.
 
 | Variable | Purpose |
 |----------|---------|
-| `MEDIA_ROOTS` | JSON array: `[{"path":"D:/Movies","type":"movies"},{"path":"D:/TV","type":"tv"}]` |
+| `MEDIA_ROOTS` | Initial media folders on first run only (JSON array). After that, folders are managed in **Settings** |
 | `METADATA_ENABLED` | Initial default for Wikipedia summaries |
 | `SCAN_ON_STARTUP` | Initial default for startup scans |
 | `THUMBNAIL_SKIP_SECONDS` | Seconds before thumbnail frame grab (default `180`) |

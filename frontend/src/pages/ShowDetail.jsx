@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchShow, playItem, setSeasonWatchStatus, setWatchStatus } from '../api'
+import { fetchShow, playItem, setSeasonWatchStatus, setShowWatchStatus, setWatchStatus } from '../api'
 import { showMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
 export default function ShowDetail() {
@@ -9,6 +9,7 @@ export default function ShowDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [seasonUpdating, setSeasonUpdating] = useState(null)
+  const [showUpdating, setShowUpdating] = useState(false)
   const [expandedSeasons, setExpandedSeasons] = useState({})
 
   async function loadShow() {
@@ -54,6 +55,32 @@ export default function ShowDetail() {
       await loadShow()
     } catch (e) {
       alert(e.message)
+    }
+  }
+
+  async function handleShowWatchStatus(watched) {
+    setShowUpdating(true)
+    try {
+      try {
+        await setShowWatchStatus(show.id, watched)
+      } catch (e) {
+        if (e.status !== 404 && e.status !== 405) throw e
+        await Promise.all(
+          show.seasons.map((season) =>
+            setSeasonWatchStatus(show.id, season.season, watched).catch(async (seasonError) => {
+              if (seasonError.status !== 404 && seasonError.status !== 405) throw seasonError
+              await Promise.all(
+                season.episodes.map((ep) => setWatchStatus('episode', ep.id, watched))
+              )
+            })
+          )
+        )
+      }
+      await loadShow()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setShowUpdating(false)
     }
   }
 
@@ -148,15 +175,37 @@ export default function ShowDetail() {
           {show.overview && (
             <p className="text-gray-300 leading-relaxed max-w-2xl">{show.overview}</p>
           )}
-          {upNext && (
-            <button
-              data-testid="play-up-next"
-              onClick={() => handlePlay(upNext.id)}
-              className="mt-6 bg-couch-red hover:bg-couch-red-dark text-white font-semibold px-6 py-2 rounded transition-colors"
-            >
-              Play S{String(upNext.season).padStart(2, '0')}E{String(upNext.episode).padStart(2, '0')}
-            </button>
-          )}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {upNext && (
+              <button
+                data-testid="play-up-next"
+                onClick={() => handlePlay(upNext.id)}
+                className="bg-couch-red hover:bg-couch-red-dark text-white font-semibold px-6 py-2 rounded transition-colors"
+              >
+                Play S{String(upNext.season).padStart(2, '0')}E{String(upNext.episode).padStart(2, '0')}
+              </button>
+            )}
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                data-testid="mark-show-watched"
+                disabled={showUpdating}
+                onClick={() => handleShowWatchStatus(true)}
+                className="text-sm text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 px-4 py-2 rounded transition-colors disabled:opacity-50"
+              >
+                Mark all watched
+              </button>
+              <button
+                type="button"
+                data-testid="mark-show-unwatched"
+                disabled={showUpdating}
+                onClick={() => handleShowWatchStatus(false)}
+                className="text-sm text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 px-4 py-2 rounded transition-colors disabled:opacity-50"
+              >
+                Mark all unwatched
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

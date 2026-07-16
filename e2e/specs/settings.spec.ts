@@ -5,6 +5,7 @@ test.describe('Settings page', () => {
     await page.goto('/settings')
     await expect(page.getByTestId('page-loading')).toBeHidden({ timeout: 15000 })
     await expect(page.getByTestId('settings-page')).toBeVisible()
+    await expect(page.getByTestId('settings-media-folders')).toBeVisible()
     await expect(page.getByTestId('rescan-library')).toBeVisible()
     await expect(page.getByTestId('settings-wikipedia-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-scan-on-startup-toggle')).toBeVisible()

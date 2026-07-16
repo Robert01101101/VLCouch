@@ -26,12 +26,23 @@ Add `data-testid` to new interactive elements:
 | Settings version | `settings-version` |
 | GitHub link | `settings-github-link` |
 | Rescan button | `rescan-library` |
+| Settings media folders list | `settings-media-folders` |
+| Add movies folder | `settings-add-movies-folder` |
+| Add TV folder | `settings-add-tv-folder` |
+| Media root row | `settings-media-root-{index}` |
+| Remove media root | `settings-remove-media-root-{index}` |
+| Manual media path input | `settings-media-path-input` |
+| Add manual media path | `settings-media-path-add` |
+| Setup wizard | `setup-wizard` |
+| Setup wizard scan | `setup-wizard-scan` |
 | Browse row section | `browse-row-{slug}` |
 | Browse row scroll container | `browse-row-scroll-{slug}` |
 | Poster card | `poster-card-{type}-{id}` |
 | Poster watch progress bar | `{cardTestId}-progress` |
 | Episode play | `play-episode-{id}` |
 | Up-next play | `play-up-next` |
+| Mark show watched | `mark-show-watched` |
+| Mark show unwatched | `mark-show-unwatched` |
 | Mark season watched | `mark-season-{n}-watched` |
 | Mark season unwatched | `mark-season-{n}-unwatched` |
 | Watched checkbox | `watched-episode-{id}` |

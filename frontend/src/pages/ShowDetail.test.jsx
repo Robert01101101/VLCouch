@@ -69,6 +69,26 @@ describe('ShowDetail', () => {
     })
   })
 
+  it('calls setShowWatchStatus when mark all watched clicked', async () => {
+    api.setShowWatchStatus.mockResolvedValue({ watched: true, updated_count: 2 })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('mark-show-watched'))
+    await waitFor(() => {
+      expect(api.setShowWatchStatus).toHaveBeenCalledWith(1, true)
+    })
+  })
+
+  it('calls setShowWatchStatus when mark all unwatched clicked', async () => {
+    api.setShowWatchStatus.mockResolvedValue({ watched: false, updated_count: 2 })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('mark-show-unwatched'))
+    await waitFor(() => {
+      expect(api.setShowWatchStatus).toHaveBeenCalledWith(1, false)
+    })
+  })
+
   it('calls setSeasonWatchStatus when mark all watched clicked', async () => {
     api.setSeasonWatchStatus.mockResolvedValue({ watched: true, updated_count: 2 })
     renderShow()

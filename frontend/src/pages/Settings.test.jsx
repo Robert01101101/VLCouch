@@ -17,10 +17,12 @@ describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     api.fetchSettings.mockResolvedValue(defaultSettings)
+    api.fetchMediaRoots.mockResolvedValue({ roots: [] })
     api.updateSettings.mockImplementation(async (patch) => ({
       ...defaultSettings,
       ...patch,
     }))
+    api.updateMediaRoots.mockImplementation(async (roots) => ({ roots }))
   })
 
   it('shows loading state', () => {
@@ -38,6 +40,7 @@ describe('Settings', () => {
   it('renders settings sections', async () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
     expect(await screen.findByTestId('settings-page')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-media-folders')).toBeInTheDocument()
     expect(screen.getByTestId('rescan-library')).toBeInTheDocument()
     expect(screen.getByTestId('settings-wikipedia-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-scan-on-startup-toggle')).toBeInTheDocument()
@@ -47,6 +50,13 @@ describe('Settings', () => {
       'href',
       'https://github.com/Robert01101101/VLCouch'
     )
+  })
+
+  it('appends dev to version in development mode', async () => {
+    vi.stubEnv('MODE', 'development')
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    expect(await screen.findByTestId('settings-version')).toHaveTextContent('0.1.0 (dev)')
+    vi.unstubAllEnvs()
   })
 
   it('calls onScan when rescan is clicked', async () => {
