@@ -11,12 +11,14 @@ GITHUB_URL = "https://github.com/Robert01101101/VLCouch"
 KEY_METADATA_ENABLED = "metadata_enabled"
 KEY_SCAN_ON_STARTUP = "scan_on_startup"
 KEY_AUTO_GENERATE_THUMBNAILS = "auto_generate_thumbnails"
+KEY_SIMPLE_VLC_PLAYBACK = "simple_vlc_playback"
 KEY_MEDIA_ROOTS = "media_roots"
 
 _DEFAULTS: dict[str, bool] = {
     KEY_METADATA_ENABLED: METADATA_ENABLED,
     KEY_SCAN_ON_STARTUP: SCAN_ON_STARTUP,
     KEY_AUTO_GENERATE_THUMBNAILS: True,
+    KEY_SIMPLE_VLC_PLAYBACK: False,
 }
 
 _cache: dict[str, bool] = {}
@@ -110,6 +112,10 @@ def auto_generate_thumbnails() -> bool:
     return _cache.get(KEY_AUTO_GENERATE_THUMBNAILS, True)
 
 
+def simple_vlc_playback() -> bool:
+    return _cache.get(KEY_SIMPLE_VLC_PLAYBACK, False)
+
+
 def media_roots() -> list[dict]:
     if _media_roots_cache is not None:
         return list(_media_roots_cache)
@@ -135,6 +141,7 @@ def get_settings_payload() -> dict:
         "metadata_enabled": metadata_enabled(),
         "scan_on_startup": scan_on_startup(),
         "auto_generate_thumbnails": auto_generate_thumbnails(),
+        "simple_vlc_playback": simple_vlc_playback(),
         "version": APP_VERSION,
         "github_url": GITHUB_URL,
     }

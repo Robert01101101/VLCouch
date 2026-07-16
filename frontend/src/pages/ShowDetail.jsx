@@ -105,12 +105,33 @@ export default function ShowDetail() {
 
   function findUpNext() {
     if (!show) return null
+    let inProgress = null
+    for (const season of show.seasons) {
+      for (const ep of season.episodes) {
+        if (!ep.watched && (ep.position_seconds ?? 0) >= 30) {
+          if (
+            !inProgress
+            || (ep.progress_percent ?? 0) > (inProgress.progress_percent ?? 0)
+          ) {
+            inProgress = ep
+          }
+        }
+      }
+    }
+    if (inProgress) return inProgress
     for (const season of show.seasons) {
       for (const ep of season.episodes) {
         if (!ep.watched) return ep
       }
     }
     return null
+  }
+
+  function episodePlayLabel(ep) {
+    if ((ep.position_seconds ?? 0) >= 30) {
+      return `Resume S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}`
+    }
+    return `Play S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}`
   }
 
   // Initialize expanded state for seasons
@@ -182,7 +203,7 @@ export default function ShowDetail() {
                 onClick={() => handlePlay(upNext.id)}
                 className="bg-couch-red hover:bg-couch-red-dark text-white font-semibold px-6 py-2 rounded transition-colors"
               >
-                Play S{String(upNext.season).padStart(2, '0')}E{String(upNext.episode).padStart(2, '0')}
+                {episodePlayLabel(upNext)}
               </button>
             )}
             <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -304,6 +325,17 @@ export default function ShowDetail() {
                           <span className="ml-2 text-xs text-gray-500">CC</span>
                         )}
                       </span>
+                      {ep.progress_percent != null && ep.progress_percent > 0 && !ep.watched && (
+                        <div
+                          className="mt-1 h-1 w-full max-w-xs rounded-full bg-gray-700 overflow-hidden"
+                          data-testid={`episode-progress-${ep.id}`}
+                        >
+                          <div
+                            className="h-full bg-couch-red"
+                            style={{ width: `${Math.min(100, ep.progress_percent)}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <label
                       className="cursor-pointer"

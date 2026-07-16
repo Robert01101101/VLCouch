@@ -42,6 +42,44 @@ def _migrate_schema() -> None:
                 conn.execute(text("ALTER TABLE movie ADD COLUMN genres TEXT"))
                 conn.commit()
 
+        wp_tables = conn.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='watchprogress'"
+            )
+        ).fetchone()
+        if wp_tables:
+            wp_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(watchprogress)"))}
+            if "position_seconds" not in wp_cols:
+                conn.execute(text("ALTER TABLE watchprogress ADD COLUMN position_seconds REAL"))
+                conn.commit()
+            if "duration_seconds" not in wp_cols:
+                conn.execute(text("ALTER TABLE watchprogress ADD COLUMN duration_seconds REAL"))
+                conn.commit()
+            if "last_position_at" not in wp_cols:
+                conn.execute(text("ALTER TABLE watchprogress ADD COLUMN last_position_at DATETIME"))
+                conn.commit()
+
+        ps_tables = conn.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='playbacksession'"
+            )
+        ).fetchone()
+        if ps_tables:
+            ps_cols = {
+                row[1] for row in conn.execute(text("PRAGMA table_info(playbacksession)"))
+            }
+            if "last_poll_time" not in ps_cols:
+                conn.execute(text("ALTER TABLE playbacksession ADD COLUMN last_poll_time REAL"))
+                conn.commit()
+            if "last_poll_length" not in ps_cols:
+                conn.execute(text("ALTER TABLE playbacksession ADD COLUMN last_poll_length REAL"))
+                conn.commit()
+            if "last_poll_position" not in ps_cols:
+                conn.execute(
+                    text("ALTER TABLE playbacksession ADD COLUMN last_poll_position REAL")
+                )
+                conn.commit()
+
 
 def init_db() -> None:
     from app import models  # noqa: F401 — register tables with SQLModel metadata

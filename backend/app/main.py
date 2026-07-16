@@ -10,6 +10,8 @@ import app.db as db
 from app import settings_store
 from app.config import FRONTEND_DIST, POSTERS_DIR
 from app.library_scan import scan_library
+from app.playback_poller import start_poller, stop_poller
+from app.playback_service import sweep_stale_sessions
 from app.routers import library, play, settings, watch
 from app.thumbnail_service import queue_all_thumbnails_backfill
 from app.thumbnails import ensure_thumbnail_cache_current_on_startup
@@ -45,6 +47,8 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
         with DBSession(db.engine) as session:
             settings_store.init_settings(session)
         ensure_thumbnail_cache_current_on_startup()
+        sweep_stale_sessions()
+        start_poller()
         should_scan = (
             settings_store.scan_on_startup()
             if lifespan_scan is None
@@ -57,6 +61,7 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
             if settings_store.auto_generate_thumbnails():
                 queue_all_thumbnails_backfill()
         yield
+        stop_poller()
 
     application = FastAPI(title="VLCouch", lifespan=lifespan)
 
@@ -91,7 +96,9 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
 
     @application.get("/api/health")
     def health():
-        return {"status": "ok"}
+        from app.vlc import VLC_LAUNCH_PROFILE
+
+        return {"status": "ok", "vlc_launch_profile": VLC_LAUNCH_PROFILE}
 
     if FRONTEND_DIST.exists():
         application.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")

@@ -1,7 +1,10 @@
+<p align="center">
+  <img src="hero.jpg" alt="VLCouch — browse local movies and TV, play in VLC" width="720">
+</p>
+
 # VLCouch
 
 **Browse your local movies and TV like a streaming app — play them in VLC.**
-
 VLCouch scans folders on your PC, builds poster rows and a “what to watch next” hero, and launches [VLC](https://www.videolan.org/) when you hit Play. No accounts, no cloud library, no transcoding. Your files stay on your drives.
 
 > **Windows-first** — built for Windows (PowerShell, VLC registry detection). Other platforms are not supported yet.  

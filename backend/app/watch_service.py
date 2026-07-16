@@ -2,7 +2,24 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
+from app.config import PLAYBACK_MIN_RESUME_SECONDS
 from app.models import Episode, WatchProgress
+
+
+def _get_or_create_progress(
+    session: Session, item_type: str, item_id: int
+) -> WatchProgress:
+    progress = session.exec(
+        select(WatchProgress).where(
+            WatchProgress.item_type == item_type,
+            WatchProgress.item_id == item_id,
+        )
+    ).first()
+    if progress:
+        return progress
+    progress = WatchProgress(item_type=item_type, item_id=item_id)
+    session.add(progress)
+    return progress
 
 
 def set_watch_status(
@@ -12,36 +29,86 @@ def set_watch_status(
     watched: bool,
 ) -> WatchProgress:
     """Create or update watch progress for a movie or episode."""
-    progress = session.exec(
-        select(WatchProgress).where(
-            WatchProgress.item_type == item_type,
-            WatchProgress.item_id == item_id,
-        )
-    ).first()
+    progress = _get_or_create_progress(session, item_type, item_id)
 
     now = datetime.utcnow()
 
-    if progress:
-        progress.watched = watched
-        if watched:
-            progress.last_watched_at = now
-        session.add(progress)
+    progress.watched = watched
+    if watched:
+        progress.last_watched_at = now
+        progress.position_seconds = None
     else:
-        progress = WatchProgress(
-            item_type=item_type,
-            item_id=item_id,
-            watched=watched,
-            last_watched_at=now if watched else None,
-        )
-        session.add(progress)
+        progress.position_seconds = None
+        progress.duration_seconds = None
+        progress.last_position_at = None
+    session.add(progress)
 
     session.commit()
+    session.refresh(progress)
     return progress
 
 
 def mark_watched(session: Session, item_type: str, item_id: int) -> WatchProgress:
     """Mark an item as watched and refresh last_watched_at."""
     return set_watch_status(session, item_type, item_id, watched=True)
+
+
+def mark_completed(session: Session, item_type: str, item_id: int) -> WatchProgress:
+    """Mark playback complete: watched with no resume position."""
+    progress = _get_or_create_progress(session, item_type, item_id)
+    now = datetime.utcnow()
+    progress.watched = True
+    progress.last_watched_at = now
+    progress.position_seconds = None
+    progress.duration_seconds = None
+    progress.last_position_at = now
+    session.add(progress)
+    session.commit()
+    session.refresh(progress)
+    return progress
+
+
+def update_position(
+    session: Session,
+    item_type: str,
+    item_id: int,
+    position: float,
+    duration: float,
+) -> WatchProgress:
+    progress = _get_or_create_progress(session, item_type, item_id)
+    progress.position_seconds = max(0.0, position)
+    if duration > 0:
+        progress.duration_seconds = duration
+    progress.last_position_at = datetime.utcnow()
+    session.add(progress)
+    session.commit()
+    session.refresh(progress)
+    return progress
+
+
+def touch_play_started(session: Session, item_type: str, item_id: int) -> WatchProgress:
+    progress = _get_or_create_progress(session, item_type, item_id)
+    progress.last_position_at = datetime.utcnow()
+    session.add(progress)
+    session.commit()
+    session.refresh(progress)
+    return progress
+
+
+def get_resume_position(session: Session, item_type: str, item_id: int) -> float | None:
+    progress = session.exec(
+        select(WatchProgress).where(
+            WatchProgress.item_type == item_type,
+            WatchProgress.item_id == item_id,
+        )
+    ).first()
+    if not progress or progress.watched:
+        return None
+    if progress.position_seconds is None:
+        return None
+    if progress.position_seconds < PLAYBACK_MIN_RESUME_SECONDS:
+        return None
+    return progress.position_seconds
 
 
 def set_season_watch_status(
@@ -72,6 +139,10 @@ def set_season_watch_status(
             progress.watched = watched
             if watched:
                 progress.last_watched_at = now
+            else:
+                progress.position_seconds = None
+                progress.duration_seconds = None
+                progress.last_position_at = None
             session.add(progress)
         else:
             session.add(
@@ -115,6 +186,10 @@ def set_show_watch_status(
             progress.watched = watched
             if watched:
                 progress.last_watched_at = now
+            else:
+                progress.position_seconds = None
+                progress.duration_seconds = None
+                progress.last_position_at = None
             session.add(progress)
         else:
             session.add(

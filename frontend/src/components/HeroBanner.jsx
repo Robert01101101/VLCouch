@@ -11,6 +11,7 @@ export default function HeroBanner({ hero, onPlayed }) {
   if (!hero) return null
 
   const isEpisode = hero.item_type === 'episode'
+  const isResume = Boolean(hero.resume_from_seconds)
   const headline = isEpisode ? hero.show_title : hero.title
   const subtitle = isEpisode
     ? `${formatEpisodeCode(hero.season, hero.episode)} — ${hero.episode_title || 'Episode'}`
@@ -19,6 +20,10 @@ export default function HeroBanner({ hero, onPlayed }) {
       : null
   const imageUrl = hero.thumbnail_url || hero.poster_url
   const description = hero.overview?.trim() || null
+  const heroLabel = isEpisode || hero.in_progress || isResume
+    ? 'Continue Watching'
+    : 'Watch Again'
+  const playLabel = isResume ? 'Resume' : 'Play'
 
   async function handlePlay() {
     setPlaying(true)
@@ -60,7 +65,7 @@ export default function HeroBanner({ hero, onPlayed }) {
 
       <div className="relative h-full flex flex-col justify-end px-6 sm:px-12 lg:px-16 pb-10 sm:pb-14 max-w-3xl">
         <p className="text-sm font-medium text-gray-300 mb-2 drop-shadow">
-          {isEpisode ? 'Continue Watching' : 'Watch Again'}
+          {heroLabel}
         </p>
         <h1 className="text-3xl sm:text-5xl font-bold mb-2 drop-shadow-lg leading-tight">
           {headline}
@@ -81,7 +86,7 @@ export default function HeroBanner({ hero, onPlayed }) {
             className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-black font-bold px-8 py-2.5 rounded transition-colors disabled:opacity-50"
           >
             <span aria-hidden="true">▶</span>
-            {playing ? 'Playing...' : 'Play'}
+            {playing ? 'Playing...' : playLabel}
           </button>
         </div>
       </div>

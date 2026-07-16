@@ -52,6 +52,29 @@ if IS_TEST:
 else:
     SCAN_ON_STARTUP = os.getenv("SCAN_ON_STARTUP", "false").lower() in ("1", "true", "yes")
 
+_vlc_port_base = os.getenv("VLC_HTTP_PORT_BASE", "9080")
+VLC_HTTP_PORT_BASE = int(_vlc_port_base) if _vlc_port_base.isdigit() else 9080
+_vlc_port_max = os.getenv("VLC_HTTP_PORT_MAX", "9099")
+VLC_HTTP_PORT_MAX = int(_vlc_port_max) if _vlc_port_max.isdigit() else 9099
+
+_poll_interval = os.getenv("PLAYBACK_POLL_INTERVAL_SECONDS", "5")
+PLAYBACK_POLL_INTERVAL_SECONDS = int(_poll_interval) if _poll_interval.isdigit() else 5
+
+_completion_ratio = os.getenv("PLAYBACK_COMPLETION_RATIO", "0.90")
+try:
+    PLAYBACK_COMPLETION_RATIO = float(_completion_ratio)
+except ValueError:
+    PLAYBACK_COMPLETION_RATIO = 0.90
+
+_min_resume = os.getenv("PLAYBACK_MIN_RESUME_SECONDS", "30")
+PLAYBACK_MIN_RESUME_SECONDS = int(_min_resume) if _min_resume.isdigit() else 30
+
+_end_seconds = os.getenv("PLAYBACK_END_SECONDS", "30")
+PLAYBACK_END_SECONDS = int(_end_seconds) if _end_seconds.isdigit() else 30
+
+PLAYLISTS_DIR = DATA_DIR / "playlists"
+PLAYLISTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def _load_media_roots() -> list[dict]:
     if IS_TEST:

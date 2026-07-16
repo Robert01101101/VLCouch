@@ -224,11 +224,26 @@ def test_browse_hero_ignores_null_last_watched_at(client):
 
 def test_play_marks_watched(client):
     ep_id = client.seed_data["episode_ids"][1]
-    response = client.post(f"/api/play/episode/{ep_id}")
-    assert response.status_code == 200
-
+    client.post(f"/api/watch-status/episode/{ep_id}", json={"watched": True})
     browse = client.get("/api/browse").json()
     assert browse["hero"] is None
+
+
+def test_browse_hero_in_progress(client):
+    ep_id = client.seed_data["episode_ids"][1]
+    from sqlmodel import Session
+
+    import app.db as db
+    from app.watch_service import update_position
+
+    with Session(db.engine) as session:
+        update_position(session, "episode", ep_id, 600, 3600)
+
+    hero = client.get("/api/browse").json()["hero"]
+    assert hero is not None
+    assert hero["episode_id"] == ep_id
+    assert hero.get("in_progress") is True
+    assert hero.get("resume_from_seconds") == 600
 
 
 def test_browse_hero_updates_when_episode_marked_watched(client):

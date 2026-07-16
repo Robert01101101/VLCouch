@@ -9,8 +9,15 @@ from sqlmodel import Session, select
 from app import settings_store
 from app.config import ROW_ITEM_LIMIT
 from app.db import get_session
-from app import settings_store
 from app.genre_tags import TOP_GENRE_ROW_LIMIT, genre_row_id, parse_genres_json, top_movie_genres
+from app.library_progress import (
+    episode_progress_fields,
+    find_in_progress_episode_on_show,
+    find_in_progress_item,
+    find_next_unwatched_after,
+    most_recent_watch,
+    most_recent_watched_episode_on_show,
+)
 from app.models import Episode, Movie, Show, WatchProgress
 from app.scanner import extract_tv_category, movie_decade
 from app.thumbnail_service import (
@@ -322,6 +329,7 @@ def get_show(
                 "watched": watched,
                 "has_subtitles": ep.subtitle_path is not None,
                 "thumbnail_url": _poster_url(ep.thumbnail_path) if ep.thumbnail_path else None,
+                **episode_progress_fields(progress),
             }
             seasons.setdefault(ep.season, []).append(ep_data)
 
@@ -368,29 +376,36 @@ def _continue_watching_items(session: Session) -> list[dict]:
 
         watched_count = 0
         last_watched_at = None
+        in_progress_ep = find_in_progress_episode_on_show(session, show.id)
 
         for ep in episodes:
             progress = session.exec(
                 select(WatchProgress).where(
                     WatchProgress.item_type == "episode",
                     WatchProgress.item_id == ep.id,
-                    WatchProgress.watched == True,  # noqa: E712
                 )
             ).first()
-            if progress:
+            if progress and progress.watched:
                 watched_count += 1
                 if progress.last_watched_at and (
                     last_watched_at is None or progress.last_watched_at > last_watched_at
                 ):
                     last_watched_at = progress.last_watched_at
+            elif progress and progress.last_position_at and (
+                last_watched_at is None or progress.last_position_at > last_watched_at
+            ):
+                last_watched_at = progress.last_position_at
 
-        if 0 < watched_count < len(episodes):
+        include = (0 < watched_count < len(episodes)) or in_progress_ep is not None
+        if include:
             card = _show_card(show, len(episodes))
             card["watched_count"] = watched_count
             card["total_episodes"] = len(episodes)
             card["last_watched_at"] = (
                 last_watched_at.isoformat() if last_watched_at else None
             )
+            if in_progress_ep:
+                card["resume_episode_id"] = in_progress_ep.id
             result.append(card)
 
     result.sort(key=lambda x: x.get("last_watched_at") or "", reverse=True)
@@ -427,75 +442,20 @@ def _is_episode_watched(session: Session, episode_id: int) -> bool:
     return progress is not None
 
 
-def _find_next_unwatched_after(
-    session: Session, show_id: int, after_episode: Episode
-) -> Episode | None:
-    """First unwatched episode after ``after_episode`` in season/episode order."""
-    episodes = session.exec(
-        select(Episode)
-        .where(Episode.show_id == show_id)
-        .order_by(Episode.season, Episode.episode)
-    ).all()
-    passed = False
-    for ep in episodes:
-        if ep.id == after_episode.id:
-            passed = True
-            continue
-        if passed and not _is_episode_watched(session, ep.id):
-            return ep
-    return None
-
-
-def _most_recent_watched_episode_on_show(
-    session: Session, show_id: int
-) -> Episode | None:
-    episodes = session.exec(
-        select(Episode)
-        .where(Episode.show_id == show_id)
-        .order_by(Episode.season, Episode.episode)
-    ).all()
-    best_episode = None
-    best_at = None
-    for ep in episodes:
-        progress = session.exec(
-            select(WatchProgress).where(
-                WatchProgress.item_type == "episode",
-                WatchProgress.item_id == ep.id,
-                WatchProgress.watched == True,  # noqa: E712
-            )
-        ).first()
-        if progress and progress.last_watched_at and (
-            best_at is None or progress.last_watched_at > best_at
-        ):
-            best_at = progress.last_watched_at
-            best_episode = ep
-    return best_episode
-
-
-def _most_recent_watch(session: Session) -> WatchProgress | None:
-    return session.exec(
-        select(WatchProgress)
-        .where(WatchProgress.watched == True)  # noqa: E712
-        .where(WatchProgress.last_watched_at.is_not(None))  # type: ignore[union-attr]
-        .order_by(desc(WatchProgress.last_watched_at))
-    ).first()
-
-
-def _hero_image_url(
-    file_path: str,
-    cache_key: str,
-    fallback_poster: str | None,
-) -> str | None:
-    from app.thumbnails import cached_thumbnail_path
-
-    thumb = cached_thumbnail_path(file_path, cache_key)
-    if thumb:
-        return _poster_url(thumb)
-    return _poster_url(fallback_poster)
-
-
-def _episode_hero(episode: Episode, show: Show, last_watched_at) -> dict:
-    return {
+def _episode_hero(
+    episode: Episode,
+    show: Show,
+    last_watched_at,
+    *,
+    resume_from_seconds: float | None = None,
+    in_progress: bool = False,
+) -> dict:
+    last_at = last_watched_at
+    if hasattr(last_at, "isoformat"):
+        last_at_str = last_at.isoformat()
+    else:
+        last_at_str = str(last_at)
+    payload = {
         "item_type": "episode",
         "episode_id": episode.id,
         "show_id": show.id,
@@ -510,8 +470,55 @@ def _episode_hero(episode: Episode, show: Show, last_watched_at) -> dict:
             f"episode_{episode.id}",
             show.poster_path,
         ),
-        "last_watched_at": last_watched_at.isoformat(),
+        "last_watched_at": last_at_str,
+        "in_progress": in_progress,
     }
+    if resume_from_seconds is not None:
+        payload["resume_from_seconds"] = resume_from_seconds
+    return payload
+
+
+def _movie_hero(movie: Movie, progress: WatchProgress, *, in_progress: bool = False) -> dict:
+    card = _movie_card(movie)
+    card["item_type"] = "movie"
+    card["thumbnail_url"] = _hero_image_url(
+        movie.file_path,
+        f"movie_{movie.id}",
+        movie.poster_path,
+    )
+    card["last_watched_at"] = (
+        progress.last_position_at or progress.last_watched_at
+    ).isoformat()
+    card["in_progress"] = in_progress
+    if progress.position_seconds is not None:
+        card["resume_from_seconds"] = progress.position_seconds
+    return card
+
+
+def _hero_from_in_progress(session: Session) -> dict | None:
+    progress = find_in_progress_item(session)
+    if not progress:
+        return None
+
+    if progress.item_type == "movie":
+        movie = session.get(Movie, progress.item_id)
+        if movie:
+            return _movie_hero(movie, progress, in_progress=True)
+
+    if progress.item_type == "episode":
+        episode = session.get(Episode, progress.item_id)
+        if episode:
+            show = session.get(Show, episode.show_id)
+            if show:
+                last_at = progress.last_position_at or datetime.utcnow()
+                return _episode_hero(
+                    episode,
+                    show,
+                    last_at,
+                    resume_from_seconds=progress.position_seconds,
+                    in_progress=True,
+                )
+    return None
 
 
 def _hero_from_continue_watching(session: Session) -> dict | None:
@@ -519,10 +526,32 @@ def _hero_from_continue_watching(session: Session) -> dict | None:
         show = session.get(Show, card["id"])
         if not show:
             continue
-        last_episode = _most_recent_watched_episode_on_show(session, show.id)
+        resume_id = card.get("resume_episode_id")
+        if resume_id:
+            episode = session.get(Episode, resume_id)
+            if episode:
+                progress = session.exec(
+                    select(WatchProgress).where(
+                        WatchProgress.item_type == "episode",
+                        WatchProgress.item_id == episode.id,
+                    )
+                ).first()
+                last_at = (
+                    progress.last_position_at if progress and progress.last_position_at
+                    else datetime.utcnow()
+                )
+                resume = progress.position_seconds if progress else None
+                return _episode_hero(
+                    episode,
+                    show,
+                    last_at,
+                    resume_from_seconds=resume,
+                    in_progress=True,
+                )
+        last_episode = most_recent_watched_episode_on_show(session, show.id)
         if not last_episode:
             continue
-        up_next = _find_next_unwatched_after(session, show.id, last_episode)
+        up_next = find_next_unwatched_after(session, show.id, last_episode)
         if not up_next:
             continue
         last_at = datetime.utcnow()
@@ -537,35 +566,44 @@ def _hero_from_continue_watching(session: Session) -> dict | None:
 
 
 def _hero_item(session: Session) -> dict | None:
-    """Hero = up next after the most recently watched item."""
-    progress = _most_recent_watch(session)
+    """Hero prioritizes in-progress resume, then up-next after last watched."""
+    in_progress = _hero_from_in_progress(session)
+    if in_progress:
+        return in_progress
+
+    progress = most_recent_watch(session)
 
     if progress:
         if progress.item_type == "movie":
             movie = session.get(Movie, progress.item_id)
             if movie:
-                card = _movie_card(movie)
-                card["item_type"] = "movie"
-                card["thumbnail_url"] = _hero_image_url(
-                    movie.file_path,
-                    f"movie_{movie.id}",
-                    movie.poster_path,
-                )
-                card["last_watched_at"] = progress.last_watched_at.isoformat()
-                return card
+                return _movie_hero(movie, progress)
 
         if progress.item_type == "episode":
             last_episode = session.get(Episode, progress.item_id)
             if last_episode:
                 show = session.get(Show, last_episode.show_id)
                 if show:
-                    up_next = _find_next_unwatched_after(
+                    up_next = find_next_unwatched_after(
                         session, show.id, last_episode
                     )
                     if up_next:
                         return _episode_hero(up_next, show, progress.last_watched_at)
 
     return _hero_from_continue_watching(session)
+
+
+def _hero_image_url(
+    file_path: str,
+    cache_key: str,
+    fallback_poster: str | None,
+) -> str | None:
+    from app.thumbnails import cached_thumbnail_path
+
+    thumb = cached_thumbnail_path(file_path, cache_key)
+    if thumb:
+        return _poster_url(thumb)
+    return _poster_url(fallback_poster)
 
 
 def _recently_watched_items(session: Session) -> list[dict]:

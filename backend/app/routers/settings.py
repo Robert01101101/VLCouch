@@ -15,6 +15,7 @@ class SettingsUpdate(BaseModel):
     metadata_enabled: bool | None = None
     scan_on_startup: bool | None = None
     auto_generate_thumbnails: bool | None = None
+    simple_vlc_playback: bool | None = None
 
 
 class MediaRootEntry(BaseModel):
@@ -54,6 +55,12 @@ def patch_settings(
         )
         if body.auto_generate_thumbnails and not was_auto_thumbnails:
             queue_all_thumbnails_backfill(background_tasks)
+    if body.simple_vlc_playback is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_SIMPLE_VLC_PLAYBACK,
+            body.simple_vlc_playback,
+        )
     return settings_store.get_settings_payload()
 
 

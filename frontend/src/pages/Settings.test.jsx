@@ -10,6 +10,7 @@ describe('Settings', () => {
     metadata_enabled: false,
     scan_on_startup: false,
     auto_generate_thumbnails: true,
+    simple_vlc_playback: false,
     version: '0.1.0',
     github_url: 'https://github.com/Robert01101101/VLCouch',
   }
@@ -45,6 +46,7 @@ describe('Settings', () => {
     expect(screen.getByTestId('settings-wikipedia-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-scan-on-startup-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-auto-thumbnails-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-simple-vlc-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-version')).toHaveTextContent('0.1.0')
     expect(screen.getByTestId('settings-github-link')).toHaveAttribute(
       'href',
@@ -82,6 +84,15 @@ describe('Settings', () => {
     fireEvent.click(toggle)
     await waitFor(() => {
       expect(api.updateSettings).toHaveBeenCalledWith({ auto_generate_thumbnails: false })
+    })
+  })
+
+  it('updates simple vlc toggle', async () => {
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    const toggle = await screen.findByTestId('settings-simple-vlc-toggle')
+    fireEvent.click(toggle)
+    await waitFor(() => {
+      expect(api.updateSettings).toHaveBeenCalledWith({ simple_vlc_playback: true })
     })
   })
 })

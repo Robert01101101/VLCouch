@@ -12,6 +12,7 @@ def test_get_settings_returns_defaults(client):
     assert data["metadata_enabled"] is False
     assert data["scan_on_startup"] is False
     assert data["auto_generate_thumbnails"] is True
+    assert data["simple_vlc_playback"] is False
     assert data["version"] == settings_store.APP_VERSION
     assert data["github_url"] == settings_store.GITHUB_URL
 

@@ -10,7 +10,8 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('settings-wikipedia-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-scan-on-startup-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-auto-thumbnails-toggle')).toBeVisible()
-    await expect(page.getByTestId('settings-version')).toHaveText('0.1.0')
+    await expect(page.getByTestId('settings-simple-vlc-toggle')).toBeVisible()
+    await expect(page.getByTestId('settings-version')).toHaveText(/0\.1\.0/)
     await expect(page.getByTestId('settings-github-link')).toBeVisible()
   })
 

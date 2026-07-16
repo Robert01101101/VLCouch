@@ -28,6 +28,7 @@ export default function PosterCard({ item, to, onPlay, testId }) {
           alt={title}
           className="w-full h-full object-cover"
           loading="lazy"
+          draggable={false}
         />
       ) : (
         <div className="w-full h-full bg-couch-gray" aria-hidden="true" />

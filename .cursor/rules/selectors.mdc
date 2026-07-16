@@ -22,6 +22,7 @@ Add `data-testid` to new interactive elements:
 | Settings page | `settings-page` |
 | Wikipedia toggle | `settings-wikipedia-toggle` |
 | Auto thumbnails toggle | `settings-auto-thumbnails-toggle` |
+| Simple VLC toggle | `settings-simple-vlc-toggle` |
 | Scan on startup toggle | `settings-scan-on-startup-toggle` |
 | Settings version | `settings-version` |
 | GitHub link | `settings-github-link` |

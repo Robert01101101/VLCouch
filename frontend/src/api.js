@@ -37,14 +37,21 @@ export async function fetchContinueWatching() {
   return res.json()
 }
 
-export async function playItem(itemType, itemId) {
-  const res = await fetch(`${API_BASE}/api/play/${itemType}/${itemId}`, {
+export async function playItem(itemType, itemId, { fromStart = false } = {}) {
+  const params = fromStart ? '?from_start=true' : ''
+  const res = await fetch(`${API_BASE}/api/play/${itemType}/${itemId}${params}`, {
     method: 'POST',
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.detail || 'Failed to play')
   }
+  return res.json()
+}
+
+export async function fetchPlaybackSession() {
+  const res = await fetch(`${API_BASE}/api/playback/session`)
+  if (!res.ok) throw new Error('Failed to fetch playback session')
   return res.json()
 }
 

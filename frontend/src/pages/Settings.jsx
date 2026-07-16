@@ -309,6 +309,34 @@ export default function Settings({ scanning, onScan }) {
 
       <section className="mb-10">
 
+        <h2 className="text-lg font-semibold text-gray-300 mb-4">Playback</h2>
+
+        <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5">
+
+          <SettingToggle
+
+            testId="settings-simple-vlc-toggle"
+
+            label="Simple VLC launch"
+
+            description="Open files in VLC without resume tracking, binge playlists, or HTTP remote control. Use this if your VLC version has compatibility issues."
+
+            checked={settings.simple_vlc_playback}
+
+            disabled={savingKey === 'simple_vlc_playback'}
+
+            onChange={(value) => handleToggle('simple_vlc_playback', value)}
+
+          />
+
+        </div>
+
+      </section>
+
+
+
+      <section className="mb-10">
+
         <h2 className="text-lg font-semibold text-gray-300 mb-4">Metadata</h2>
 
         <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5">

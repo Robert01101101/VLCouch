@@ -18,13 +18,14 @@ MEDIA_ROOTS (.env)
     → FastAPI routers (browse, play, watch, settings)
     → frontend/src/api.js
     → React pages (Home hero + rows, ShowDetail, Settings)
-    → POST /api/play/{type}/{id} → vlc.py launches VLC
-    → watch progress + thumbnails updated on play / mark watched
+    → POST /api/play/{type}/{id} → vlc.py launches VLC with HTTP tracking
+    → playback_poller polls VLC status.json for position + completion
+    → watch progress + thumbnails updated on completion / mark watched
 ```
 
 **Browse flow:** `GET /api/browse` returns a hero item (up-next episode or rewatch movie) and curated rows (recently watched, TV themes, movie decades/genres). The frontend renders `HeroBanner` and `Row` components with poster cards.
 
-**Play/watch flow:** Play triggers VLC via the play router; watch status is stored in SQLite. Thumbnails are generated lazily by `thumbnail_service.py` when items are played or marked watched.
+**Play/watch flow:** Play launches VLC with per-session HTTP remote control. A background poller tracks playback position and marks items watched on completion (~90% or last 30s). TV episodes play as M3U binge playlists (all remaining unwatched in the show). Thumbnails are generated on completion or manual mark watched.
 
 With the backend running, inspect all endpoints and schemas at **http://localhost:8000/docs** (OpenAPI).
 
@@ -47,8 +48,8 @@ With the backend running, inspect all endpoints and schemas at **http://localhos
 | Filename / folder parsing | `backend/app/scanner.py` |
 | Scan orchestration | `backend/app/library_scan.py` |
 | Thumbnail extraction | `backend/app/thumbnail_service.py`, `backend/app/thumbnail_jobs.py` |
-| VLC launch | `backend/app/routers/play.py`, `backend/app/vlc.py` |
-| Watch status | `backend/app/routers/watch.py`, `backend/app/watch_service.py` |
+| VLC launch + playback tracking | `backend/app/routers/play.py`, `backend/app/vlc.py`, `backend/app/playback_service.py`, `backend/app/playback_poller.py`, `backend/app/vlc_http.py`, `backend/app/vlc_playlist.py` |
+| Watch status + resume position | `backend/app/routers/watch.py`, `backend/app/watch_service.py`, `backend/app/library_progress.py` |
 | Settings persistence | `backend/app/routers/settings.py`, `backend/app/settings_store.py` |
 | Wikipedia metadata | `backend/app/metadata.py` |
 | DB models | `backend/app/models.py`, `backend/app/db.py` |

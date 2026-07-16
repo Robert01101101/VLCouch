@@ -42,6 +42,37 @@ class WatchProgress(SQLModel, table=True):
     item_id: int = Field(index=True)
     watched: bool = False
     last_watched_at: datetime | None = None
+    position_seconds: float | None = None
+    duration_seconds: float | None = None
+    last_position_at: datetime | None = None
+
+
+class PlaybackSession(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    status: str = Field(default="active", index=True)  # active, ended, error
+    mode: str = Field(default="single")  # single, playlist
+    pid: int | None = None
+    http_port: int | None = None
+    http_password: str | None = None
+    playlist_path: str | None = None
+    current_item_type: str | None = None
+    current_item_id: int | None = None
+    current_plid: int | None = None
+    last_poll_time: float | None = None
+    last_poll_length: float | None = None
+    last_poll_position: float | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+
+
+class PlaybackSessionItem(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    session_id: str = Field(foreign_key="playbacksession.id", index=True)
+    sequence: int
+    item_type: str
+    item_id: int
+    plid: int | None = None
+    file_path: str
 
 
 class AppSetting(SQLModel, table=True):
