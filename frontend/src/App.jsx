@@ -16,10 +16,9 @@ export default function App() {
     setScanning(true)
     try {
       await triggerScan()
-      await waitForScanComplete()
+      const status = await waitForScanComplete()
       setRefreshKey((key) => key + 1)
-    } catch (e) {
-      alert(e.message)
+      return status
     } finally {
       setScanning(false)
     }
@@ -86,7 +85,11 @@ export default function App() {
             path="/settings"
             element={
               <div className="px-6 max-w-7xl mx-auto py-8">
-                <Settings scanning={scanning} onScan={handleScan} />
+                <Settings
+                  scanning={scanning}
+                  onScan={handleScan}
+                  onBrowseRefresh={() => setRefreshKey((key) => key + 1)}
+                />
               </div>
             }
           />

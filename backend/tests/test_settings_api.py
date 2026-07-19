@@ -20,6 +20,16 @@ def test_get_settings_returns_defaults(client):
     assert data["browse_row_random"] is False
     assert data["version"] == settings_store.APP_VERSION
     assert data["github_url"] == settings_store.GITHUB_URL
+    assert "diagnostics" in data
+    assert "vlc_path" in data["diagnostics"]
+    assert "vlc_found" in data["diagnostics"]
+    assert "ffmpeg_available" in data["diagnostics"]
+    assert "winget_available" in data["diagnostics"]
+    assert "vlc_download_url" in data["diagnostics"]
+    assert "ffmpeg_download_url" in data["diagnostics"]
+    counts = data["diagnostics"]["library_counts"]
+    assert set(counts.keys()) == {"movies", "shows", "episodes"}
+    assert all(isinstance(counts[key], int) for key in counts)
 
 
 def test_patch_settings_persists(client):
@@ -137,3 +147,37 @@ def test_disabling_auto_thumbnails_does_not_queue_backfill(client):
         assert response.status_code == 200
         assert response.json()["auto_generate_thumbnails"] is False
         mock_queue.assert_not_called()
+
+
+def test_install_dependency_unknown(client):
+    response = client.post("/api/dependencies/notreal/install")
+    assert response.status_code == 400
+
+
+def test_install_dependency_unavailable_in_test_mode(client):
+    response = client.post("/api/dependencies/vlc/install")
+    assert response.status_code == 503
+
+
+@patch("app.dependencies.subprocess.Popen")
+@patch("app.dependencies.winget_available", return_value=True)
+@patch("app.dependencies.dependency_installed", return_value=False)
+def test_install_dependency_starts_winget(mock_installed, mock_winget, mock_popen):
+    from app.dependencies import install_dependency
+
+    result = install_dependency("vlc")
+
+    assert result["started"] is True
+    mock_popen.assert_called_once()
+    cmd = mock_popen.call_args.args[0]
+    assert "VideoLAN.VLC" in cmd
+
+
+@patch("app.dependencies.dependency_installed", return_value=True)
+def test_install_dependency_already_installed(mock_installed):
+    from app.dependencies import install_dependency
+
+    result = install_dependency("ffmpeg")
+
+    assert result["started"] is False
+    assert result["already_installed"] is True

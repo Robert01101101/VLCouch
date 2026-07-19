@@ -30,12 +30,37 @@ Add `data-testid` to new interactive elements:
 | VLC playlist advance toggle | `settings-vlc-playlist-advance-toggle` |
 | Scan on startup toggle | `settings-scan-on-startup-toggle` |
 | Browse row random toggle | `settings-browse-row-random-toggle` |
+| Settings action error | `settings-action-error` |
+| Settings retry load | `settings-retry-load` |
+| Settings rescan prompt | `settings-rescan-prompt` |
+| Settings rescan disabled hint | `settings-rescan-disabled-hint` |
+| Settings last scan stats | `settings-last-scan-stats` |
+| Settings thumbnail notice | `settings-thumbnail-notice` |
+| Settings VLC simple mode note | `settings-vlc-simple-note` |
+| Settings VLC playlist options | `settings-vlc-playlist-options` |
+| Settings VLC playlist advance hint | `settings-vlc-playlist-advance-hint` |
+| Settings diagnostics | `settings-diagnostics` |
+| Settings diagnostics library counts | `settings-diagnostics-library-counts` |
+| Settings dependencies section | `settings-dependencies` |
+| Settings dependency VLC row | `settings-dependency-vlc` |
+| Settings dependency VLC status | `settings-dependency-vlc-status` |
+| Settings dependency VLC path | `settings-dependency-vlc-path` |
+| Settings dependency VLC download | `settings-dependency-vlc-download` |
+| Settings dependency VLC install | `settings-dependency-vlc-install` |
+| Settings dependency ffmpeg row | `settings-dependency-ffmpeg` |
+| Settings dependency ffmpeg status | `settings-dependency-ffmpeg-status` |
+| Settings dependency ffmpeg download | `settings-dependency-ffmpeg-download` |
+| Settings dependency ffmpeg install | `settings-dependency-ffmpeg-install` |
+| Settings dependencies refresh | `settings-dependencies-refresh` |
+| Settings install notice | `settings-install-notice` |
 | Settings version | `settings-version` |
 | GitHub link | `settings-github-link` |
 | Rescan button | `rescan-library` |
 | Settings media folders list | `settings-media-folders` |
-| Add movies folder | `settings-add-movies-folder` |
-| Add TV folder | `settings-add-tv-folder` |
+| Settings media folders section | `settings-media-folders-section` |
+| Media row (empty slot) | `settings-media-row-{type}` |
+| Choose media folder | `settings-media-row-{type}-choose` |
+| Media root path (click to change) | `settings-media-root-{index}-path` |
 | Media root row | `settings-media-root-{index}` |
 | Remove media root | `settings-remove-media-root-{index}` |
 | Manual media path input | `settings-media-path-input` |

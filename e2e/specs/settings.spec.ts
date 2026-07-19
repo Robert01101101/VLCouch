@@ -17,6 +17,8 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('settings-vlc-tv-playlist-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-vlc-playlist-advance-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-simple-vlc-toggle')).toBeVisible()
+    await expect(page.getByTestId('settings-dependencies')).toBeVisible()
+    await expect(page.getByTestId('settings-diagnostics')).toBeVisible()
     await expect(page.getByTestId('settings-version')).toHaveText(/0\.1\.0/)
     await expect(page.getByTestId('settings-github-link')).toBeVisible()
   })

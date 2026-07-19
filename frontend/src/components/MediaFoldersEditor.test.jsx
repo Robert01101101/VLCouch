@@ -12,9 +12,10 @@ describe('MediaFoldersEditor', () => {
     api.pickMediaFolder.mockResolvedValue({ cancelled: false, path: 'D:\\Movies' })
   })
 
-  it('shows empty state', () => {
+  it('shows choose-folder rows when empty', () => {
     render(<MediaFoldersEditor roots={[]} onChange={vi.fn()} />)
-    expect(screen.getByTestId('settings-media-folders-empty')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-media-row-movies-choose')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-media-row-tv-choose')).toBeInTheDocument()
   })
 
   it('adds a folder from manual path input', async () => {
@@ -48,5 +49,15 @@ describe('MediaFoldersEditor', () => {
     await waitFor(() => {
       expect(api.updateMediaRoots).toHaveBeenCalledWith([])
     })
+  })
+
+  it('shows configured path as clickable', () => {
+    render(
+      <MediaFoldersEditor
+        roots={[{ path: 'D:\\Movies', type: 'movies' }]}
+        onChange={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('settings-media-root-0-path')).toHaveTextContent('D:\\Movies')
   })
 })

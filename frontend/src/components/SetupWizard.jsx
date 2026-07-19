@@ -25,7 +25,13 @@ export default function SetupWizard({ roots, onRootsChange, scanning, onScan }) 
         <button
           type="button"
           data-testid="setup-wizard-scan"
-          onClick={onScan}
+          onClick={async () => {
+            try {
+              await onScan()
+            } catch (e) {
+              alert(e.message)
+            }
+          }}
           disabled={!canScan || scanning}
           className="rounded bg-couch-red px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-couch-red-dark disabled:opacity-50"
         >

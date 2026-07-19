@@ -1,9 +1,13 @@
 import json
 
-from sqlmodel import Session
+from sqlalchemy import func
+from sqlmodel import Session, select
 
 from app.config import MEDIA_ROOTS, METADATA_ENABLED, SCAN_ON_STARTUP
-from app.models import AppSetting
+from app.dependencies import DEPENDENCIES, winget_available
+from app.models import AppSetting, Episode, Movie, Show
+from app.thumbnails import ffmpeg_available
+from app.vlc import find_vlc_path
 
 APP_VERSION = "0.1.0"
 GITHUB_URL = "https://github.com/Robert01101101/VLCouch"
@@ -174,8 +178,28 @@ def set_media_roots(session: Session, roots: list[dict]) -> None:
     _media_roots_cache = normalized
 
 
-def get_settings_payload() -> dict:
+def _library_counts(session: Session) -> dict:
+    movies = session.exec(select(func.count()).select_from(Movie)).one()
+    shows = session.exec(select(func.count()).select_from(Show)).one()
+    episodes = session.exec(select(func.count()).select_from(Episode)).one()
+    return {"movies": movies, "shows": shows, "episodes": episodes}
+
+
+def get_diagnostics(session: Session) -> dict:
+    vlc_path = find_vlc_path()
     return {
+        "vlc_path": vlc_path,
+        "vlc_found": vlc_path is not None,
+        "vlc_download_url": DEPENDENCIES["vlc"]["download_url"],
+        "ffmpeg_available": ffmpeg_available(),
+        "ffmpeg_download_url": DEPENDENCIES["ffmpeg"]["download_url"],
+        "winget_available": winget_available(),
+        "library_counts": _library_counts(session),
+    }
+
+
+def get_settings_payload(session: Session | None = None) -> dict:
+    payload = {
         "metadata_enabled": metadata_enabled(),
         "scan_on_startup": scan_on_startup(),
         "auto_generate_thumbnails": auto_generate_thumbnails(),
@@ -188,3 +212,6 @@ def get_settings_payload() -> dict:
         "version": APP_VERSION,
         "github_url": GITHUB_URL,
     }
+    if session is not None:
+        payload["diagnostics"] = get_diagnostics(session)
+    return payload

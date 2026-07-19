@@ -5,6 +5,7 @@ from sqlmodel import Session
 from app import settings_store
 from app.config import TEST_MODE
 from app.db import get_session
+from app.dependencies import DEPENDENCIES, install_dependency
 from app.folder_picker import pick_folder
 from app.thumbnail_service import queue_all_thumbnails_backfill
 
@@ -33,8 +34,8 @@ class MediaRootsUpdate(BaseModel):
 
 
 @router.get("/settings")
-def get_settings():
-    return settings_store.get_settings_payload()
+def get_settings(session: Session = Depends(get_session)):
+    return settings_store.get_settings_payload(session)
 
 
 @router.patch("/settings")
@@ -96,7 +97,7 @@ def patch_settings(
             settings_store.KEY_BROWSE_ROW_RANDOM,
             body.browse_row_random,
         )
-    return settings_store.get_settings_payload()
+    return settings_store.get_settings_payload(session)
 
 
 @router.get("/media-roots")
@@ -122,3 +123,18 @@ def pick_media_folder():
     if not path:
         return {"cancelled": True, "path": None}
     return {"cancelled": False, "path": path}
+
+
+@router.post("/dependencies/{name}/install")
+def install_dependency_package(name: str):
+    if name not in DEPENDENCIES:
+        raise HTTPException(status_code=400, detail=f"Unknown dependency: {name}")
+    if TEST_MODE:
+        raise HTTPException(
+            status_code=503,
+            detail="Dependency installation is not available in test mode",
+        )
+    try:
+        return install_dependency(name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

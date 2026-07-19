@@ -1,6 +1,12 @@
 const API_BASE = ''
 const BROWSE_SESSION_KEY = 'vlcouch-browse-session'
 
+export function resetBrowseSession() {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem(BROWSE_SESSION_KEY)
+  }
+}
+
 export function getBrowseSessionId() {
   if (typeof sessionStorage === 'undefined') {
     return ''
@@ -176,6 +182,17 @@ export async function pickMediaFolder() {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.detail || 'Failed to open folder picker')
+  }
+  return res.json()
+}
+
+export async function installDependency(name) {
+  const res = await fetch(`${API_BASE}/api/dependencies/${name}/install`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || 'Failed to start installation')
   }
   return res.json()
 }

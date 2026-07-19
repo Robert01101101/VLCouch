@@ -35,5 +35,6 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | GET | `/api/media-roots` | `settings.py` | `fetchMediaRoots` |
 | PUT | `/api/media-roots` | `settings.py` | `updateMediaRoots` |
 | POST | `/api/media-roots/pick-folder` | `settings.py` | `pickMediaFolder` |
+| POST | `/api/dependencies/{name}/install` | `settings.py` | `installDependency` |
 
 Poster images are served at `/posters/{filename}` (static mount in `main.py`); URLs appear in API response fields like `thumbnail_url`, not as separate api.js calls.

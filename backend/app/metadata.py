@@ -5,14 +5,17 @@ import httpx
 from sqlmodel import Session
 
 from app.models import Movie, Show
-from app.settings_store import metadata_enabled
+from app.settings_store import APP_VERSION, GITHUB_URL, metadata_enabled
 
 logger = logging.getLogger(__name__)
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 WIKI_REST = "https://en.wikipedia.org/api/rest_v1/page/summary"
-USER_AGENT = "VLCouch/1.0 (personal local media app)"
+USER_AGENT = f"VLCouch/{APP_VERSION} (+{GITHUB_URL}; local media app)"
 
+
+def has_cached_overview(overview: str | None) -> bool:
+    return bool(overview and overview.strip())
 
 def _search_page_title(query: str) -> str | None:
     try:
@@ -75,7 +78,7 @@ def lookup_overview(title: str, kind: str, year: int | None = None) -> str | Non
 
 
 def enrich_movie(session: Session, movie: Movie) -> None:
-    if movie.overview:
+    if has_cached_overview(movie.overview):
         return
     overview = lookup_overview(movie.title, "movie", movie.year)
     if overview:
@@ -85,7 +88,7 @@ def enrich_movie(session: Session, movie: Movie) -> None:
 
 
 def enrich_show(session: Session, show: Show) -> None:
-    if show.overview:
+    if has_cached_overview(show.overview):
         return
     try:
         overview = lookup_overview(show.title, "tv")
@@ -93,8 +96,5 @@ def enrich_show(session: Session, show: Show) -> None:
             show.overview = overview
             session.add(show)
             session.commit()
-    except Exception as e:
-        # Log the error but don't fail the entire request
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.exception("Error enriching show %d (%s): %s", show.id, show.title, str(e))
+    except Exception:
+        logger.exception("Error enriching show %d (%s)", show.id, show.title)
