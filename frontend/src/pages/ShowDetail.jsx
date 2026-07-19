@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchShow, playItem, setSeasonWatchStatus, setShowWatchStatus, setWatchStatus } from '../api'
+import { sessionAppliesToShow, sessionPlayingEpisodeId, sessionProgressPercent, usePlaybackRefresh } from '../playbackRefresh'
 import { showMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
 export default function ShowDetail() {
@@ -11,6 +12,9 @@ export default function ShowDetail() {
   const [seasonUpdating, setSeasonUpdating] = useState(null)
   const [showUpdating, setShowUpdating] = useState(false)
   const [expandedSeasons, setExpandedSeasons] = useState({})
+  const [playbackKick, setPlaybackKick] = useState(0)
+  const showRef = useRef(show)
+  showRef.current = show
 
   async function loadShow() {
     try {
@@ -33,6 +37,11 @@ export default function ShowDetail() {
     }
   }, [id])
 
+  const shouldRefreshPlayback = useCallback(
+    (session) => sessionAppliesToShow(session, showRef.current),
+    []
+  )
+
   useEffect(() => {
     setLoading(true)
     loadShow()
@@ -40,9 +49,19 @@ export default function ShowDetail() {
 
   usePollForThumbnails(!loading && showMissingThumbnails(show), refreshThumbnails)
 
+  const playbackSession = usePlaybackRefresh(refreshThumbnails, {
+    enabled: !loading && Boolean(show),
+    shouldRefresh: shouldRefreshPlayback,
+    kick: playbackKick,
+  })
+
+  const playingEpisodeId = sessionPlayingEpisodeId(playbackSession)
+  const playingProgressPercent = sessionProgressPercent(playbackSession)
+
   async function handlePlay(episodeId) {
     try {
       await playItem('episode', episodeId)
+      setPlaybackKick((k) => k + 1)
       await loadShow()
     } catch (e) {
       alert(e.message)
@@ -282,13 +301,25 @@ export default function ShowDetail() {
           {expandedSeasons[season.season] && (
             <div className="space-y-2">
               {season.episodes.map((ep) => {
+                const isPlaying = playingEpisodeId === ep.id
                 const isUpNext = upNext && upNext.id === ep.id
+                const showRing = isPlaying || (Boolean(isUpNext) && playingEpisodeId == null)
+                const showProgress =
+                  isPlaying ||
+                  (ep.progress_percent != null && ep.progress_percent > 0 && !ep.watched)
+                const progressWidth = Math.min(
+                  100,
+                  isPlaying
+                    ? (playingProgressPercent ?? ep.progress_percent ?? 0)
+                    : (ep.progress_percent ?? 0)
+                )
                 return (
                   <div
                     key={ep.id}
                     role="button"
                     tabIndex={0}
                     data-testid={`play-episode-${ep.id}`}
+                    data-playing={isPlaying ? 'true' : undefined}
                     onClick={() => handlePlay(ep.id)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -297,9 +328,11 @@ export default function ShowDetail() {
                       }
                     }}
                     className={`flex items-center gap-4 p-3 rounded-lg cursor-pointer ${
-                      ep.watched ? 'opacity-60' : ''
+                      ep.watched && !isPlaying ? 'opacity-60' : ''
                     } ${
-                      isUpNext ? 'bg-couch-gray ring-1 ring-couch-red' : 'bg-couch-gray/50'
+                      showRing
+                        ? 'bg-couch-gray ring-1 ring-couch-red'
+                        : 'bg-couch-gray/50'
                     }`}
                   >
                     <div className="w-16 flex-shrink-0">
@@ -325,14 +358,14 @@ export default function ShowDetail() {
                           <span className="ml-2 text-xs text-gray-500">CC</span>
                         )}
                       </span>
-                      {ep.progress_percent != null && ep.progress_percent > 0 && !ep.watched && (
+                      {showProgress && (
                         <div
                           className="mt-1 h-1 w-full max-w-xs rounded-full bg-gray-700 overflow-hidden"
                           data-testid={`episode-progress-${ep.id}`}
                         >
                           <div
                             className="h-full bg-couch-red"
-                            style={{ width: `${Math.min(100, ep.progress_percent)}%` }}
+                            style={{ width: `${progressWidth}%` }}
                           />
                         </div>
                       )}

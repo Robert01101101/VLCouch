@@ -33,7 +33,7 @@ With the backend running, inspect all endpoints and schemas at **http://localhos
 
 | Task | Command |
 |------|---------|
-| Dev servers | `.\dev.ps1` → http://localhost:5173 |
+| Dev servers | `.\scripts\dev.ps1` → http://localhost:5173 |
 | All tests | `.\scripts\test.ps1` |
 | API tests only | `.\scripts\test.ps1 -Layer api` |
 | Unit tests only | `.\scripts\test.ps1 -Layer unit` |
@@ -100,7 +100,7 @@ Tests use `APP_ENV=test` with fixture media in `backend/tests/fixtures/media/`.
 | React component | Test in `frontend/src/**/*.test.jsx` |
 | User flow | Playwright spec in `e2e/specs/` |
 | Interactive UI | `data-testid` on buttons, rows, cards (see `.cursor/rules/selectors.mdc`) |
-| Env var | `.env.example` (+ update docs via maintain-agent-docs skill) |
+| Env var | `docs/.env.example` (+ update docs via maintain-agent-docs skill) |
 
 ## Self-correction loop
 
@@ -117,7 +117,7 @@ backend/app/          # FastAPI application
 backend/tests/        # pytest suite + fixtures
 frontend/src/         # React UI
 e2e/specs/            # Playwright E2E tests
-scripts/test.ps1      # unified test runner
+scripts/              # dev, test, setup, and launcher scripts
 .cursor/skills/       # agent self-verification skills
 ```
 

@@ -35,6 +35,7 @@ describe('ShowDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     api.fetchShow.mockResolvedValue(mockShow)
+    api.fetchPlaybackSession.mockResolvedValue({ active: false })
   })
 
   it('renders episode list', async () => {
@@ -121,5 +122,33 @@ describe('ShowDetail', () => {
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 10, true)
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 11, true)
     })
+  })
+
+  it('shows playing indicator for watched episode while VLC session is active', async () => {
+    api.fetchShow.mockResolvedValue({
+      ...mockShow,
+      seasons: [
+        {
+          season: 1,
+          episodes: [
+            { id: 10, season: 1, episode: 1, title: 'Pilot', watched: true },
+            { id: 11, season: 1, episode: 2, title: 'Cat\'s in the Bag...', watched: false },
+          ],
+        },
+      ],
+    })
+    api.fetchPlaybackSession.mockResolvedValue({
+      active: true,
+      current_item_type: 'episode',
+      current_item_id: 10,
+      progress_percent: 98.2,
+    })
+
+    renderShow()
+    await screen.findByTestId('show-detail')
+    expect(screen.getByTestId('play-episode-10')).toHaveAttribute('data-playing', 'true')
+    expect(screen.getByTestId('play-episode-11')).not.toHaveClass('ring-couch-red')
+    const progressBar = screen.getByTestId('episode-progress-10').firstChild
+    expect(progressBar).toHaveStyle({ width: '98.2%' })
   })
 })

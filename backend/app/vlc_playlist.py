@@ -20,6 +20,7 @@ def build_m3u(
     episodes: list[Episode],
     *,
     start_times: dict[int, float] | None = None,
+    subtitles_on: bool = False,
 ) -> str:
     """Build M3U content for VLC binge playlists with per-item resume options."""
     resume = start_times or {}
@@ -34,5 +35,7 @@ def build_m3u(
             lines.append(f"#EXTVLCOPT:start-time={start}")
         if ep.subtitle_path and Path(ep.subtitle_path).exists():
             lines.append(f"#EXTVLCOPT:sub-file={path_to_file_uri(ep.subtitle_path)}")
+        if subtitles_on:
+            lines.append("#EXTVLCOPT:sub-track=0")
         lines.append(path_to_file_uri(ep.file_path))
     return "\n".join(lines) + "\n"

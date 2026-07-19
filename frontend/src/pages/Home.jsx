@@ -4,6 +4,7 @@ import HeroBanner from '../components/HeroBanner'
 import Row from '../components/Row'
 import SetupWizard from '../components/SetupWizard'
 import { fetchBrowse, fetchMediaRoots, playItem } from '../api'
+import { usePlaybackRefresh } from '../playbackRefresh'
 import { browseMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
 export default function Home({ refreshKey = 0, scanning = false, onScan }) {
@@ -31,7 +32,7 @@ export default function Home({ refreshKey = 0, scanning = false, onScan }) {
     }
   }
 
-  const refreshThumbnails = useCallback(async () => {
+  const refreshBrowse = useCallback(async () => {
     try {
       const data = await fetchBrowse()
       setHero(data.hero ?? null)
@@ -41,14 +42,18 @@ export default function Home({ refreshKey = 0, scanning = false, onScan }) {
     }
   }, [])
 
+  const libraryReady = !loading && mediaRoots !== null && mediaRoots.length > 0
+
   useEffect(() => {
     loadData()
   }, [refreshKey, location.key])
 
   usePollForThumbnails(
-    !loading && browseMissingThumbnails({ hero, rows }),
-    refreshThumbnails
+    libraryReady && browseMissingThumbnails({ hero, rows }),
+    refreshBrowse
   )
+
+  usePlaybackRefresh(refreshBrowse, { enabled: libraryReady })
 
   async function handlePlayMovie(movie) {
     try {

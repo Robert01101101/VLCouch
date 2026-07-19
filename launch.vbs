@@ -7,7 +7,7 @@ Dim fso, shell, scriptDir, startPs1, cmd, exitCode
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set shell = CreateObject("WScript.Shell")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
-startPs1 = scriptDir & "\start.ps1"
+startPs1 = scriptDir & "\scripts\start.ps1"
 
 If Not fso.FileExists(startPs1) Then
     shell.Popup _

@@ -1,4 +1,4 @@
 @echo off
 echo Restarting VLCouch servers...
-powershell -ExecutionPolicy Bypass -File "%~dp0restart.ps1"
+powershell -ExecutionPolicy Bypass -File "%~dp0scripts\restart.ps1"
 pause

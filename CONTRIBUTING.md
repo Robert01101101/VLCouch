@@ -2,7 +2,7 @@
 
 Thanks for helping improve VLCouch. PRs are welcome.
 
-**Windows-first** — use PowerShell from the repo root (`.\dev.ps1`, `.\scripts\test.ps1`).
+**Windows-first** — use PowerShell from the repo root (`.\scripts\dev.ps1`, `.\scripts\test.ps1`).
 
 ## Getting started
 

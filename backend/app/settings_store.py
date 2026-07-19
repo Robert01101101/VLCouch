@@ -12,6 +12,11 @@ KEY_METADATA_ENABLED = "metadata_enabled"
 KEY_SCAN_ON_STARTUP = "scan_on_startup"
 KEY_AUTO_GENERATE_THUMBNAILS = "auto_generate_thumbnails"
 KEY_SIMPLE_VLC_PLAYBACK = "simple_vlc_playback"
+KEY_VLC_SUBTITLES_ON = "vlc_subtitles_on"
+KEY_VLC_RESUME_PLAYBACK = "vlc_resume_playback"
+KEY_VLC_TV_PLAYLIST = "vlc_tv_playlist"
+KEY_VLC_PLAYLIST_ADVANCE = "vlc_playlist_advance"
+KEY_BROWSE_ROW_RANDOM = "browse_row_random"
 KEY_MEDIA_ROOTS = "media_roots"
 
 _DEFAULTS: dict[str, bool] = {
@@ -19,6 +24,11 @@ _DEFAULTS: dict[str, bool] = {
     KEY_SCAN_ON_STARTUP: SCAN_ON_STARTUP,
     KEY_AUTO_GENERATE_THUMBNAILS: True,
     KEY_SIMPLE_VLC_PLAYBACK: False,
+    KEY_VLC_SUBTITLES_ON: False,
+    KEY_VLC_RESUME_PLAYBACK: True,
+    KEY_VLC_TV_PLAYLIST: True,
+    KEY_VLC_PLAYLIST_ADVANCE: True,
+    KEY_BROWSE_ROW_RANDOM: False,
 }
 
 _cache: dict[str, bool] = {}
@@ -116,6 +126,34 @@ def simple_vlc_playback() -> bool:
     return _cache.get(KEY_SIMPLE_VLC_PLAYBACK, False)
 
 
+def vlc_subtitles_on() -> bool:
+    if simple_vlc_playback():
+        return False
+    return _cache.get(KEY_VLC_SUBTITLES_ON, False)
+
+
+def vlc_resume_playback() -> bool:
+    if simple_vlc_playback():
+        return False
+    return _cache.get(KEY_VLC_RESUME_PLAYBACK, True)
+
+
+def vlc_tv_playlist() -> bool:
+    if simple_vlc_playback():
+        return False
+    return _cache.get(KEY_VLC_TV_PLAYLIST, True)
+
+
+def vlc_playlist_advance() -> bool:
+    if simple_vlc_playback():
+        return False
+    return _cache.get(KEY_VLC_PLAYLIST_ADVANCE, True)
+
+
+def browse_row_random() -> bool:
+    return _cache.get(KEY_BROWSE_ROW_RANDOM, False)
+
+
 def media_roots() -> list[dict]:
     if _media_roots_cache is not None:
         return list(_media_roots_cache)
@@ -142,6 +180,11 @@ def get_settings_payload() -> dict:
         "scan_on_startup": scan_on_startup(),
         "auto_generate_thumbnails": auto_generate_thumbnails(),
         "simple_vlc_playback": simple_vlc_playback(),
+        "vlc_subtitles_on": _cache.get(KEY_VLC_SUBTITLES_ON, False),
+        "vlc_resume_playback": _cache.get(KEY_VLC_RESUME_PLAYBACK, True),
+        "vlc_tv_playlist": _cache.get(KEY_VLC_TV_PLAYLIST, True),
+        "vlc_playlist_advance": _cache.get(KEY_VLC_PLAYLIST_ADVANCE, True),
+        "browse_row_random": _cache.get(KEY_BROWSE_ROW_RANDOM, False),
         "version": APP_VERSION,
         "github_url": GITHUB_URL,
     }

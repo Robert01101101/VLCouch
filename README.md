@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="hero.jpg" alt="VLCouch — browse local movies and TV, play in VLC" width="720">
+  <img src="docs/hero.jpg" alt="VLCouch — browse local movies and TV, play in VLC" width="720">
 </p>
 
 # VLCouch
@@ -58,11 +58,11 @@ Optional **genre rows** for movies: add sidecar tag files like `1917 (2019) - Dr
 
 ```powershell
 # 1. Configure media paths
-copy .env.example .env
+copy docs\.env.example .env
 # Edit MEDIA_ROOTS in .env
 
 # 2. Start backend + frontend (creates venv and installs deps on first run)
-.\dev.ps1
+.\scripts\dev.ps1
 ```
 
 Open http://localhost:5173 → **Settings** → **Rescan Library**.
@@ -108,7 +108,7 @@ Runtime toggles (saved in `backend/data/library.db` — no restart needed):
 
 ### Environment (`.env`)
 
-Requires a server restart. See `.env.example` for defaults.
+Requires a server restart. See `docs/.env.example` for defaults.
 
 | Variable | Purpose |
 |----------|---------|

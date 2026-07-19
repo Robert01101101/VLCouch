@@ -70,7 +70,7 @@ def remaining_unwatched_episodes(
     show_id: int,
     from_episode: Episode,
 ) -> list[Episode]:
-    """All unwatched episodes from ``from_episode`` onward in season/episode order."""
+    """Episodes to play from a user click: that episode first, then later unwatched ones."""
     episodes = session.exec(
         select(Episode)
         .where(Episode.show_id == show_id)
@@ -81,7 +81,8 @@ def remaining_unwatched_episodes(
     for ep in episodes:
         if ep.id == from_episode.id:
             started = True
-        if started and not is_episode_watched(session, ep.id):
+            result.append(ep)
+        elif started and not is_episode_watched(session, ep.id):
             result.append(ep)
     return result
 

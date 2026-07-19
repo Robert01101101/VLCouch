@@ -1,4 +1,4 @@
-# Local config (keep *.example templates tracked)
+# Local config (keep docs/*.example templates tracked)
 .env
 .env.local
 .env.test

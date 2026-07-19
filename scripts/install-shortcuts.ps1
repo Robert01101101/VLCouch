@@ -60,10 +60,10 @@ if (-not (Test-VlcInstalled)) {
 
 Write-Host ""
 if (-not (Test-Path (Join-Path $root ".env"))) {
-    $example = Join-Path $root ".env.example"
+    $example = Join-Path $root "docs\.env.example"
     if (Test-Path $example) {
         Copy-Item $example (Join-Path $root ".env")
-        Write-Host "Created .env from .env.example — add media folders in Settings after launch." -ForegroundColor Yellow
+        Write-Host "Created .env from docs\.env.example — add media folders in Settings after launch." -ForegroundColor Yellow
     } else {
         Write-Host "Warning: no .env file found. Create one with your MEDIA_ROOTS." -ForegroundColor Yellow
     }

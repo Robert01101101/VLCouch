@@ -11,6 +11,11 @@ describe('Settings', () => {
     scan_on_startup: false,
     auto_generate_thumbnails: true,
     simple_vlc_playback: false,
+    vlc_subtitles_on: false,
+    vlc_resume_playback: true,
+    vlc_tv_playlist: true,
+    vlc_playlist_advance: true,
+    browse_row_random: false,
     version: '0.1.0',
     github_url: 'https://github.com/Robert01101101/VLCouch',
   }
@@ -45,8 +50,14 @@ describe('Settings', () => {
     expect(screen.getByTestId('rescan-library')).toBeInTheDocument()
     expect(screen.getByTestId('settings-wikipedia-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-scan-on-startup-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-browse-row-random-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-auto-thumbnails-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-simple-vlc-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-options')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-subtitles-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-resume-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-tv-playlist-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-playlist-advance-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-version')).toHaveTextContent('0.1.0')
     expect(screen.getByTestId('settings-github-link')).toHaveAttribute(
       'href',
@@ -69,6 +80,15 @@ describe('Settings', () => {
     expect(onScan).toHaveBeenCalled()
   })
 
+  it('updates browse row random toggle', async () => {
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    const toggle = await screen.findByTestId('settings-browse-row-random-toggle')
+    fireEvent.click(toggle)
+    await waitFor(() => {
+      expect(api.updateSettings).toHaveBeenCalledWith({ browse_row_random: true })
+    })
+  })
+
   it('updates wikipedia toggle', async () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
     const toggle = await screen.findByTestId('settings-wikipedia-toggle')
@@ -84,6 +104,28 @@ describe('Settings', () => {
     fireEvent.click(toggle)
     await waitFor(() => {
       expect(api.updateSettings).toHaveBeenCalledWith({ auto_generate_thumbnails: false })
+    })
+  })
+
+  it('disables vlc options when simple vlc is enabled', async () => {
+    api.fetchSettings.mockResolvedValue({
+      ...defaultSettings,
+      simple_vlc_playback: true,
+      vlc_subtitles_on: true,
+    })
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    const subtitles = await screen.findByTestId('settings-vlc-subtitles-toggle')
+    const resume = screen.getByTestId('settings-vlc-resume-toggle')
+    expect(subtitles).toBeDisabled()
+    expect(resume).toBeDisabled()
+  })
+
+  it('updates vlc subtitles toggle', async () => {
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    const toggle = await screen.findByTestId('settings-vlc-subtitles-toggle')
+    fireEvent.click(toggle)
+    await waitFor(() => {
+      expect(api.updateSettings).toHaveBeenCalledWith({ vlc_subtitles_on: true })
     })
   })
 

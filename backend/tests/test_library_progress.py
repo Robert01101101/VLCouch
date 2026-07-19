@@ -39,3 +39,13 @@ def test_remaining_unwatched_episodes(client):
         ).first()
         assert progress is not None
         assert progress.watched is True
+
+
+def test_remaining_unwatched_includes_clicked_watched_episode(client):
+    show_id = client.seed_data["show_id"]
+    ep_ids = client.seed_data["episode_ids"]
+
+    with Session(db.engine) as session:
+        from_ep = session.get(Episode, ep_ids[0])
+        remaining = remaining_unwatched_episodes(session, show_id, from_ep)
+        assert [ep.id for ep in remaining] == ep_ids

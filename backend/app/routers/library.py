@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+import random
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -29,6 +30,25 @@ from app.thumbnail_service import (
 from app.thumbnails import poster_public_url
 
 router = APIRouter(prefix="/api", tags=["library"])
+
+
+def _order_row_items(
+    items: list[dict],
+    *,
+    browse_session: str | None = None,
+    row_id: str | None = None,
+) -> list[dict]:
+    """Sort browse row cards alphabetically or shuffle them once per browse session."""
+    ordered = sorted(items, key=lambda item: item["title"].lower())
+    if not settings_store.browse_row_random():
+        return ordered
+
+    session_key = browse_session or "default"
+    row_key = row_id or "|".join(str(item["id"]) for item in ordered)
+    seed = hash((session_key, row_key)) & 0xFFFFFFFF
+    shuffled = list(ordered)
+    random.Random(seed).shuffle(shuffled)
+    return shuffled
 
 
 def _watch_activity_maps(
@@ -193,6 +213,7 @@ def search_library(
 @router.get("/browse")
 def browse_home(
     background_tasks: BackgroundTasks,
+    browse_session: str | None = None,
     session: Session = Depends(get_session),
 ):
     """Curated home-page rows: recently watched, TV themes, movie decades; hero = up next."""
@@ -225,9 +246,14 @@ def browse_home(
         by_category[category].append(_show_card(show, episode_counts[show.id]))
 
     for category in sorted(by_category.keys(), key=str.lower):
-        items = sorted(by_category[category], key=lambda x: x["title"].lower())
+        row_id = f"tv-{category.lower().replace(' ', '-')}"
+        items = _order_row_items(
+            by_category[category],
+            browse_session=browse_session,
+            row_id=row_id,
+        )
         rows.append({
-            "id": f"tv-{category.lower().replace(' ', '-')}",
+            "id": row_id,
             "title": category,
             "item_type": "show",
             "items": items[:ROW_ITEM_LIMIT],
@@ -247,9 +273,14 @@ def browse_home(
         return int(label.replace("s", ""))
 
     for decade in sorted(by_decade.keys(), key=_decade_key, reverse=True):
-        items = sorted(by_decade[decade], key=lambda x: x["title"].lower())
+        row_id = f"movies-{decade}"
+        items = _order_row_items(
+            by_decade[decade],
+            browse_session=browse_session,
+            row_id=row_id,
+        )
         rows.append({
-            "id": f"movies-{decade}",
+            "id": row_id,
             "title": f"{decade} Movies" if decade != "Unknown Year" else "Movies (Unknown Year)",
             "item_type": "movie",
             "items": items[:ROW_ITEM_LIMIT],
@@ -264,11 +295,16 @@ def browse_home(
         genre_movies = [
             movie for movie in movies if genre in parse_genres_json(movie.genres)
         ]
-        items = sorted((_movie_card(movie) for movie in genre_movies), key=lambda x: x["title"].lower())
+        row_id = genre_row_id(genre)
+        items = _order_row_items(
+            [_movie_card(movie) for movie in genre_movies],
+            browse_session=browse_session,
+            row_id=row_id,
+        )
         if not items:
             continue
         genre_rows.append({
-            "id": genre_row_id(genre),
+            "id": row_id,
             "title": f"{genre} Movies",
             "item_type": "movie",
             "items": items[:ROW_ITEM_LIMIT],

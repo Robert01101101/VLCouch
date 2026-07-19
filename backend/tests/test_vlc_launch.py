@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.vlc import _http_launch_args, _launch_vlc_process, _vlc_launch_env
+from app.vlc import _http_launch_args, _launch_vlc_process, _subtitle_launch_args, _vlc_launch_env
 
 
 def test_http_launch_args_include_qt_intf():
@@ -15,6 +15,54 @@ def test_vlc_launch_env_sets_plugin_path(tmp_path):
     (tmp_path / "plugins").mkdir()
     env = _vlc_launch_env(tmp_path)
     assert env["VLC_PLUGIN_PATH"] == str(tmp_path / "plugins")
+
+
+@patch("app.vlc.settings_store.simple_vlc_playback", return_value=False)
+@patch("app.vlc.settings_store.vlc_subtitles_on", return_value=False)
+def test_subtitle_launch_args_without_setting(mock_subtitles_on, mock_simple, tmp_path):
+    sub = tmp_path / "movie.srt"
+    sub.write_text("1\n00:00:00,000 --> 00:00:01,000\nHi", encoding="utf-8")
+    args = _subtitle_launch_args(str(sub))
+    assert args == []
+
+
+@patch("app.vlc.settings_store.simple_vlc_playback", return_value=False)
+@patch("app.vlc.settings_store.vlc_subtitles_on", return_value=True)
+def test_subtitle_launch_args_with_setting(mock_subtitles_on, mock_simple, tmp_path):
+    sub = tmp_path / "movie.srt"
+    sub.write_text("1\n00:00:00,000 --> 00:00:01,000\nHi", encoding="utf-8")
+    args = _subtitle_launch_args(str(sub))
+    assert args == [f"--sub-file={sub}", "--sub-track=0"]
+
+
+@patch("app.vlc.settings_store.simple_vlc_playback", return_value=True)
+@patch("app.vlc.settings_store.vlc_subtitles_on", return_value=True)
+def test_subtitle_launch_args_disabled_in_simple_mode(mock_subtitles_on, mock_simple, tmp_path):
+    sub = tmp_path / "movie.srt"
+    sub.write_text("1\n00:00:00,000 --> 00:00:01,000\nHi", encoding="utf-8")
+    args = _subtitle_launch_args(str(sub))
+    assert args == []
+
+
+@patch("app.vlc.settings_store.simple_vlc_playback", return_value=False)
+@patch("app.vlc.settings_store.vlc_subtitles_on", return_value=True)
+def test_subtitle_launch_args_embedded_only(mock_subtitles_on, mock_simple):
+    args = _subtitle_launch_args(None)
+    assert args == ["--sub-track=0"]
+
+
+@patch("app.vlc.settings_store.vlc_playlist_advance", return_value=True)
+def test_playlist_behavior_args_when_enabled(mock_advance):
+    from app.vlc import _playlist_behavior_args
+
+    assert _playlist_behavior_args() == ["--no-repeat", "--no-loop"]
+
+
+@patch("app.vlc.settings_store.vlc_playlist_advance", return_value=False)
+def test_playlist_behavior_args_when_disabled(mock_advance):
+    from app.vlc import _playlist_behavior_args
+
+    assert _playlist_behavior_args() == []
 
 
 @patch("app.vlc.TEST_MODE", False)

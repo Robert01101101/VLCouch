@@ -24,7 +24,7 @@ from app.watch_service import get_resume_position
 logger = logging.getLogger(__name__)
 
 # Bump when VLC launch args change; exposed on /api/health so stale servers are obvious.
-VLC_LAUNCH_PROFILE = "2026-07-no-m3u-extvlcopt-vlc4"
+VLC_LAUNCH_PROFILE = "2026-07-playlist-clicked-episode-fix"
 
 DEFAULT_VLC_PATHS = [
     Path(r"C:\Program Files\VideoLAN\VLC\vlc.exe"),
@@ -61,6 +61,36 @@ def _vlc_launch_env(install_dir: Path) -> dict[str, str]:
     if plugins_dir.is_dir():
         env["VLC_PLUGIN_PATH"] = str(plugins_dir)
     return env
+
+
+def _subtitle_launch_args(subtitle_path: str | None) -> list[str]:
+    """Build VLC subtitle CLI args from user settings and detected subtitle file."""
+    if settings_store.simple_vlc_playback() or not settings_store.vlc_subtitles_on():
+        return []
+    cmd: list[str] = []
+    if subtitle_path and Path(subtitle_path).exists():
+        cmd.append(f"--sub-file={subtitle_path}")
+    cmd.append("--sub-track=0")
+    return cmd
+
+
+def _playlist_behavior_args() -> list[str]:
+    """Prevent VLC from looping the current item or entire playlist."""
+    if settings_store.vlc_playlist_advance():
+        return ["--no-repeat", "--no-loop"]
+    return []
+
+
+def _resolve_resume(
+    session: Session,
+    item_type: str,
+    item_id: int,
+    *,
+    from_start: bool,
+) -> float | None:
+    if from_start or not settings_store.vlc_resume_playback():
+        return None
+    return get_resume_position(session, item_type, item_id)
 
 
 def _http_launch_args(http_port: int, http_password: str) -> list[str]:
@@ -115,10 +145,7 @@ def launch_simple(
     if not TEST_MODE and not Path(file_path).exists():
         raise FileNotFoundError(f"Media file not found: {file_path}")
 
-    cmd: list[str] = []
-    if subtitle_path and Path(subtitle_path).exists():
-        cmd.append(f"--sub-file={subtitle_path}")
-    cmd.append(file_path)
+    cmd = [file_path]
     _launch_vlc_process(cmd)
 
     return {
@@ -146,15 +173,14 @@ def launch_single(
     if not TEST_MODE and not Path(file_path).exists():
         raise FileNotFoundError(f"Media file not found: {file_path}")
 
-    resume = None if from_start else get_resume_position(session, item_type, item_id)
+    resume = _resolve_resume(session, item_type, item_id, from_start=from_start)
     http_port = allocate_http_port()
     http_password = generate_http_password()
 
     cmd = _http_launch_args(http_port, http_password)
     if resume:
         cmd.append(f"--start-time={resume}")
-    if subtitle_path and Path(subtitle_path).exists():
-        cmd.append(f"--sub-file={subtitle_path}")
+    cmd.extend(_subtitle_launch_args(subtitle_path))
     cmd.append(file_path)
 
     pid = _launch_vlc_process(cmd)
@@ -193,7 +219,7 @@ def launch_playlist(
         raise ValueError(f"No unwatched episodes from episode {episode.id}")
 
     start_times: dict[int, float] = {}
-    if not from_start:
+    if not from_start and settings_store.vlc_resume_playback():
         resume = get_resume_position(session, "episode", episode.id)
         if resume:
             start_times[episode.id] = resume
@@ -206,19 +232,21 @@ def launch_playlist(
     session_id = str(uuid.uuid4())
     playlist_path = str(PLAYLISTS_DIR / f"{session_id}.m3u")
     Path(playlist_path).write_text(
-        build_m3u(episodes, start_times=start_times),
+        build_m3u(
+            episodes,
+            start_times=start_times,
+            subtitles_on=settings_store.vlc_subtitles_on(),
+        ),
         encoding="utf-8",
     )
 
     http_port = allocate_http_port()
     http_password = generate_http_password()
-    resume = start_times.get(episode.id)
     cmd = [
         *_http_launch_args(http_port, http_password),
         "--playlist-autostart",
+        *_playlist_behavior_args(),
     ]
-    if resume:
-        cmd.append(f"--start-time={resume}")
     cmd.append(playlist_path)
     pid = _launch_vlc_process(cmd)
 
@@ -296,6 +324,17 @@ def play_item(
         episode = session.get(Episode, item_id)
         if not episode:
             raise ValueError(f"Episode {item_id} not found")
-        return launch_playlist(session, episode=episode, from_start=from_start)
+        if settings_store.vlc_tv_playlist():
+            return launch_playlist(session, episode=episode, from_start=from_start)
+        file_path, subtitle_path, title = resolve_playable(session, item_type, item_id)
+        return launch_single(
+            session,
+            item_type=item_type,
+            item_id=item_id,
+            file_path=file_path,
+            subtitle_path=subtitle_path,
+            title=title,
+            from_start=from_start,
+        )
 
     raise ValueError(f"Unknown item type: {item_type}")

@@ -1,6 +1,7 @@
 # Start backend and frontend dev servers in separate windows
 $ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Split-Path -Parent $scriptDir
 
 Write-Host "Starting VLCouch dev servers..." -ForegroundColor Cyan
 

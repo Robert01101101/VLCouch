@@ -9,6 +9,6 @@ alwaysApply: true
 - Python backend in `backend/app/`; routers in `backend/app/routers/`
 - React frontend in `frontend/src/`; plain JavaScript (no TypeScript)
 - Config via `.env` at repo root; never commit `.env`
-- Use `.\dev.ps1` for local dev; `.\scripts\test.ps1` to verify changes. Do not try to open ps1 files, run them in terminal.
+- Use `.\scripts\dev.ps1` for local dev; `.\scripts\test.ps1` to verify changes. Do not try to open ps1 files, run them in terminal.
 - Windows-first: PowerShell scripts, VLC registry detection, backslash-safe SQLite paths in `db.py`
 - Keep changes minimal; match existing naming and patterns in surrounding code

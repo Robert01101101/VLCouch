@@ -13,6 +13,11 @@ def test_get_settings_returns_defaults(client):
     assert data["scan_on_startup"] is False
     assert data["auto_generate_thumbnails"] is True
     assert data["simple_vlc_playback"] is False
+    assert data["vlc_subtitles_on"] is False
+    assert data["vlc_resume_playback"] is True
+    assert data["vlc_tv_playlist"] is True
+    assert data["vlc_playlist_advance"] is True
+    assert data["browse_row_random"] is False
     assert data["version"] == settings_store.APP_VERSION
     assert data["github_url"] == settings_store.GITHUB_URL
 
@@ -97,6 +102,15 @@ def test_enrich_show_fetches_when_enabled(client):
 
         session.refresh(show)
         assert show.overview == "A chemistry teacher turns to crime."
+
+
+def test_patch_vlc_subtitles_on_persists(client):
+    response = client.patch("/api/settings", json={"vlc_subtitles_on": True})
+    assert response.status_code == 200
+    assert response.json()["vlc_subtitles_on"] is True
+
+    response = client.get("/api/settings")
+    assert response.json()["vlc_subtitles_on"] is True
 
 
 def test_enabling_auto_thumbnails_queues_backfill(client):

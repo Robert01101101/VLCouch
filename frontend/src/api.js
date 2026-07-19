@@ -1,15 +1,29 @@
 const API_BASE = ''
+const BROWSE_SESSION_KEY = 'vlcouch-browse-session'
+
+export function getBrowseSessionId() {
+  if (typeof sessionStorage === 'undefined') {
+    return ''
+  }
+  let id = sessionStorage.getItem(BROWSE_SESSION_KEY)
+  if (!id) {
+    id = crypto.randomUUID()
+    sessionStorage.setItem(BROWSE_SESSION_KEY, id)
+  }
+  return id
+}
+
+export async function fetchBrowse() {
+  const params = new URLSearchParams({ browse_session: getBrowseSessionId() })
+  const res = await fetch(`${API_BASE}/api/browse?${params}`)
+  if (!res.ok) throw new Error('Failed to fetch browse data')
+  return res.json()
+}
 
 export async function searchLibrary(query) {
   const params = new URLSearchParams({ q: query })
   const res = await fetch(`${API_BASE}/api/search?${params}`)
   if (!res.ok) throw new Error('Failed to search library')
-  return res.json()
-}
-
-export async function fetchBrowse() {
-  const res = await fetch(`${API_BASE}/api/browse`)
-  if (!res.ok) throw new Error('Failed to fetch browse data')
   return res.json()
 }
 

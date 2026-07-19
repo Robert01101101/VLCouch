@@ -11,10 +11,10 @@ Run this checklist after you:
 
 - Add or change `data-testid` in `frontend/src/`
 - Add or change API routes under `backend/app/routers/`
-- Add env vars to `backend/app/config.py` or `.env.example`
+- Add env vars to `backend/app/config.py` or `docs/.env.example`
 - Add test files under `backend/tests/`, `frontend/src/`, or `e2e/specs/`
 - Move modules or change the scan → browse → play architecture
-- Change commands in `scripts/test.ps1`, `dev.ps1`, or `README.md`
+- Change commands in `scripts/test.ps1`, `scripts/dev.ps1`, or `README.md`
 
 ## Checklist
 
@@ -69,8 +69,8 @@ When you add modules or move responsibilities, update **Architecture overview** 
 
 If you add a config variable:
 
-1. Add it to `.env.example` with a short comment
-2. If tests depend on it, add to `.env.test.example` and mention in `AGENTS.md` **Known pitfalls** or **Do not touch**
+1. Add it to `docs/.env.example` with a short comment
+2. If tests depend on it, add to `docs/.env.test.example` and mention in `AGENTS.md` **Known pitfalls** or **Do not touch**
 3. Document in `README.md` configuration table if user-facing
 
 Grep for config reads:
@@ -83,7 +83,7 @@ rg 'os\.environ|getenv|Field\(' backend/app/config.py backend/app/ -n
 
 Ensure `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, and `.cursor/rules/project.mdc` agree on:
 
-- `.\dev.ps1` for local dev
+- `.\scripts\dev.ps1` for local dev
 - `.\scripts\test.ps1` and `-Layer api|unit|e2e|all`
 
 ```powershell

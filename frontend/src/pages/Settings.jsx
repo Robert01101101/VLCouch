@@ -273,6 +273,22 @@ export default function Settings({ scanning, onScan }) {
 
           />
 
+          <SettingToggle
+
+            testId="settings-browse-row-random-toggle"
+
+            label="Randomize home row order"
+
+            description="Shuffle movies and TV shows within each browse row on the home page. Order stays the same until you close the app. When off, items are sorted alphabetically."
+
+            checked={settings.browse_row_random}
+
+            disabled={savingKey === 'browse_row_random'}
+
+            onChange={(value) => handleToggle('browse_row_random', value)}
+
+          />
+
         </div>
 
       </section>
@@ -311,7 +327,7 @@ export default function Settings({ scanning, onScan }) {
 
         <h2 className="text-lg font-semibold text-gray-300 mb-4">Playback</h2>
 
-        <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5">
+        <div className="space-y-6 rounded-lg border border-gray-800 bg-couch-gray/40 p-5">
 
           <SettingToggle
 
@@ -319,7 +335,7 @@ export default function Settings({ scanning, onScan }) {
 
             label="Simple VLC launch"
 
-            description="Open files in VLC without resume tracking, binge playlists, or HTTP remote control. Use this if your VLC version has compatibility issues."
+            description="Open files in VLC with no extra options. Disables the playback options below. Use this if your VLC version has compatibility issues."
 
             checked={settings.simple_vlc_playback}
 
@@ -328,6 +344,84 @@ export default function Settings({ scanning, onScan }) {
             onChange={(value) => handleToggle('simple_vlc_playback', value)}
 
           />
+
+          <div
+
+            data-testid="settings-vlc-options"
+
+            className={`ml-1 space-y-6 border-l border-gray-700 pl-5 ${
+
+              settings.simple_vlc_playback ? 'opacity-50' : ''
+
+            }`}
+
+          >
+
+            <SettingToggle
+
+              testId="settings-vlc-subtitles-toggle"
+
+              label="Enable subtitles"
+
+              description="Turn on subtitles in VLC when playing. Uses detected subtitle files or the first embedded subtitle track."
+
+              checked={settings.vlc_subtitles_on}
+
+              disabled={settings.simple_vlc_playback || savingKey === 'vlc_subtitles_on'}
+
+              onChange={(value) => handleToggle('vlc_subtitles_on', value)}
+
+            />
+
+            <SettingToggle
+
+              testId="settings-vlc-resume-toggle"
+
+              label="Remember playback position"
+
+              description="Save your place while watching and resume from that position the next time you play."
+
+              checked={settings.vlc_resume_playback}
+
+              disabled={settings.simple_vlc_playback || savingKey === 'vlc_resume_playback'}
+
+              onChange={(value) => handleToggle('vlc_resume_playback', value)}
+
+            />
+
+            <SettingToggle
+
+              testId="settings-vlc-tv-playlist-toggle"
+
+              label="TV binge playlists"
+
+              description="Queue all remaining unwatched episodes in a show when you play an episode."
+
+              checked={settings.vlc_tv_playlist}
+
+              disabled={settings.simple_vlc_playback || savingKey === 'vlc_tv_playlist'}
+
+              onChange={(value) => handleToggle('vlc_tv_playlist', value)}
+
+            />
+
+            <SettingToggle
+
+              testId="settings-vlc-playlist-advance-toggle"
+
+              label="Auto-advance to next episode"
+
+              description="Prevent VLC from repeating the current episode and continue to the next item in the playlist."
+
+              checked={settings.vlc_playlist_advance}
+
+              disabled={settings.simple_vlc_playback || savingKey === 'vlc_playlist_advance'}
+
+              onChange={(value) => handleToggle('vlc_playlist_advance', value)}
+
+            />
+
+          </div>
 
         </div>
 

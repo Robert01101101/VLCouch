@@ -16,6 +16,11 @@ class SettingsUpdate(BaseModel):
     scan_on_startup: bool | None = None
     auto_generate_thumbnails: bool | None = None
     simple_vlc_playback: bool | None = None
+    vlc_subtitles_on: bool | None = None
+    vlc_resume_playback: bool | None = None
+    vlc_tv_playlist: bool | None = None
+    vlc_playlist_advance: bool | None = None
+    browse_row_random: bool | None = None
 
 
 class MediaRootEntry(BaseModel):
@@ -60,6 +65,36 @@ def patch_settings(
             session,
             settings_store.KEY_SIMPLE_VLC_PLAYBACK,
             body.simple_vlc_playback,
+        )
+    if body.vlc_subtitles_on is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_VLC_SUBTITLES_ON,
+            body.vlc_subtitles_on,
+        )
+    if body.vlc_resume_playback is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_VLC_RESUME_PLAYBACK,
+            body.vlc_resume_playback,
+        )
+    if body.vlc_tv_playlist is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_VLC_TV_PLAYLIST,
+            body.vlc_tv_playlist,
+        )
+    if body.vlc_playlist_advance is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_VLC_PLAYLIST_ADVANCE,
+            body.vlc_playlist_advance,
+        )
+    if body.browse_row_random is not None:
+        settings_store.set_bool(
+            session,
+            settings_store.KEY_BROWSE_ROW_RANDOM,
+            body.browse_row_random,
         )
     return settings_store.get_settings_payload()
 

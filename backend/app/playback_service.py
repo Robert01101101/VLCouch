@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 
 import app.db as db
 from app.config import PLAYLISTS_DIR, TEST_MODE
+from app import settings_store
 from app.models import Episode, Movie, PlaybackSession, PlaybackSessionItem
 from app.vlc_http import (
     VlcStatus,
@@ -21,6 +22,7 @@ from app.vlc_http import (
     is_playback_complete,
     terminate_pid,
 )
+from app.library_progress import progress_percent
 from app.watch_service import mark_completed, touch_play_started, update_position
 
 logger = logging.getLogger(__name__)
@@ -82,7 +84,7 @@ def finalize_session(
     if not playback or playback.status != "active":
         return
 
-    if save_position and playback.http_port and playback.http_password:
+    if save_position and settings_store.vlc_resume_playback() and playback.http_port and playback.http_password:
         status_data = fetch_status(playback.http_port, playback.http_password)
         if (
             status_data
@@ -239,7 +241,7 @@ def poll_session(session: Session, session_id: str) -> bool:
                 session.add(item)
 
     if playback.current_item_type and playback.current_item_id:
-        if _should_persist_position(status_data):
+        if settings_store.vlc_resume_playback() and _should_persist_position(status_data):
             update_position(
                 session,
                 playback.current_item_type,
@@ -253,7 +255,7 @@ def poll_session(session: Session, session_id: str) -> bool:
                 playback.current_item_type, playback.current_item_id
             )
 
-        if _should_persist_position(status_data):
+        if settings_store.vlc_resume_playback() and _should_persist_position(status_data):
             playback.last_poll_time = status_data.time
             playback.last_poll_length = status_data.length
             playback.last_poll_position = status_data.position
@@ -275,13 +277,14 @@ def _finalize_current_item(session: Session, playback: PlaybackSession) -> None:
     length = playback.last_poll_length if playback.last_poll_length is not None else 0
     position = playback.last_poll_position if playback.last_poll_position is not None else 0
 
-    update_position(
-        session,
-        playback.current_item_type,
-        playback.current_item_id,
-        time,
-        length,
-    )
+    if settings_store.vlc_resume_playback():
+        update_position(
+            session,
+            playback.current_item_type,
+            playback.current_item_id,
+            time,
+            length,
+        )
     from app.vlc_http import is_playback_complete
 
     prior = VlcStatus(
@@ -308,7 +311,7 @@ def get_session_status(session: Session) -> dict | None:
     playback = get_active_session(session)
     if not playback:
         return None
-    return {
+    status = {
         "session_id": playback.id,
         "status": playback.status,
         "mode": playback.mode,
@@ -316,6 +319,17 @@ def get_session_status(session: Session) -> dict | None:
         "current_item_id": playback.current_item_id,
         "started_at": playback.started_at.isoformat() if playback.started_at else None,
     }
+    if playback.last_poll_time is not None or playback.last_poll_length is not None:
+        status["position_seconds"] = playback.last_poll_time
+        status["duration_seconds"] = playback.last_poll_length
+        pct = progress_percent(playback.last_poll_time, playback.last_poll_length)
+        if pct is not None:
+            status["progress_percent"] = pct
+        elif playback.last_poll_position is not None:
+            status["progress_percent"] = min(
+                100.0, round(playback.last_poll_position * 100, 1)
+            )
+    return status
 
 
 def resolve_playable(

@@ -8,6 +8,21 @@ def test_path_to_file_uri_windows():
     assert "S01E01.mkv" in uri
 
 
+def test_build_m3u_subtitles_on_adds_sub_track():
+    episodes = [
+        Episode(
+            id=1,
+            show_id=1,
+            season=1,
+            episode=1,
+            title="Pilot",
+            file_path=r"C:\media\S01E01.mkv",
+        ),
+    ]
+    content = build_m3u(episodes, subtitles_on=True)
+    assert content.count("#EXTVLCOPT:sub-track=0") == 1
+
+
 def test_build_m3u_plain_playlist_without_extvlcopt():
     episodes = [
         Episode(

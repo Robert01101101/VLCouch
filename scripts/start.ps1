@@ -2,7 +2,7 @@
 # Safe to run repeatedly — reuses an already-running server.
 $ErrorActionPreference = "Stop"
 
-$root = $PSScriptRoot
+$root = Split-Path -Parent $PSScriptRoot
 $port = 8000
 $hostAddr = "127.0.0.1"
 $baseUrl = "http://${hostAddr}:$port"

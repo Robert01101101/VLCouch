@@ -23,7 +23,13 @@ Add `data-testid` to new interactive elements:
 | Wikipedia toggle | `settings-wikipedia-toggle` |
 | Auto thumbnails toggle | `settings-auto-thumbnails-toggle` |
 | Simple VLC toggle | `settings-simple-vlc-toggle` |
+| VLC playback options group | `settings-vlc-options` |
+| VLC subtitles toggle | `settings-vlc-subtitles-toggle` |
+| VLC resume toggle | `settings-vlc-resume-toggle` |
+| VLC TV playlist toggle | `settings-vlc-tv-playlist-toggle` |
+| VLC playlist advance toggle | `settings-vlc-playlist-advance-toggle` |
 | Scan on startup toggle | `settings-scan-on-startup-toggle` |
+| Browse row random toggle | `settings-browse-row-random-toggle` |
 | Settings version | `settings-version` |
 | GitHub link | `settings-github-link` |
 | Rescan button | `rescan-library` |
@@ -47,6 +53,7 @@ Add `data-testid` to new interactive elements:
 | Mark season watched | `mark-season-{n}-watched` |
 | Mark season unwatched | `mark-season-{n}-unwatched` |
 | Watched checkbox | `watched-episode-{id}` |
+| Episode currently playing | `play-episode-{id}` with `data-playing="true"` |
 | Show detail page | `show-detail` |
 
 Notes:

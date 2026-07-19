@@ -41,6 +41,36 @@ def test_browse_has_top_genre_rows(client):
     assert any(item["title"] == "The Matrix" for item in action["items"])
 
 
+def test_order_row_items_alphabetical_by_default():
+    from unittest.mock import patch
+
+    from app.routers.library import _order_row_items
+
+    items = [{"id": 1, "title": "Zulu"}, {"id": 2, "title": "Alpha"}]
+    with patch("app.routers.library.settings_store.browse_row_random", return_value=False):
+        ordered = _order_row_items(items)
+    assert [item["title"] for item in ordered] == ["Alpha", "Zulu"]
+
+
+def test_order_row_items_random_when_enabled():
+    from unittest.mock import patch
+
+    from app.routers.library import _order_row_items
+
+    items = [
+        {"id": 1, "title": "Alpha"},
+        {"id": 2, "title": "Mike"},
+        {"id": 3, "title": "Zulu"},
+    ]
+    with patch("app.routers.library.settings_store.browse_row_random", return_value=True):
+        first = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
+        second = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
+        third = _order_row_items(items, browse_session="session-b", row_id="movies-1990s")
+    assert first == second
+    assert [item["title"] for item in first] != ["Alpha", "Mike", "Zulu"]
+    assert third != first or len(items) <= 1
+
+
 def test_browse_excludes_continue_watching_row(client):
     movie_id = client.seed_data["movie_id"]
     client.post(f"/api/watch-status/movie/{movie_id}", json={"watched": True})
