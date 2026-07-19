@@ -10,6 +10,7 @@ const mockShow = {
   id: 1,
   title: 'Breaking Bad',
   overview: 'A chemistry teacher turns to crime.',
+  media_folder: 'D:\\TV\\Breaking Bad',
   seasons: [
     {
       season: 1,
@@ -121,6 +122,16 @@ describe('ShowDetail', () => {
     await waitFor(() => {
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 10, true)
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 11, true)
+    })
+  })
+
+  it('calls openShowFolder when open folder clicked', async () => {
+    api.openShowFolder.mockResolvedValue({ path: 'D:\\TV\\Breaking Bad', opened: true })
+    renderShow()
+    await screen.findByTestId('show-detail')
+    fireEvent.click(screen.getByTestId('open-show-folder'))
+    await waitFor(() => {
+      expect(api.openShowFolder).toHaveBeenCalledWith(1)
     })
   })
 

@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,3 +37,10 @@ def pick_folder() -> str | None:
 
     path = result.stdout.strip()
     return path if path else None
+
+
+def open_folder(path: Path) -> None:
+    """Open a folder in File Explorer on Windows."""
+    if sys.platform != "win32":
+        raise OSError("Opening folders is only supported on Windows")
+    os.startfile(path)  # noqa: S606

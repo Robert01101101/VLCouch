@@ -153,10 +153,25 @@ def test_get_show_detail(client):
     assert show["title"] == "Breaking Bad"
     assert len(show["seasons"]) == 1
     assert len(show["seasons"][0]["episodes"]) == 2
+    assert show["media_folder"].replace("\\", "/").endswith("/Breaking Bad")
 
 
 def test_get_show_not_found(client):
     response = client.get("/api/shows/9999")
+    assert response.status_code == 404
+
+
+def test_open_show_folder(client):
+    show_id = client.seed_data["show_id"]
+    response = client.post(f"/api/shows/{show_id}/open-folder")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["opened"] is False
+    assert data["path"].replace("\\", "/").endswith("/Breaking Bad")
+
+
+def test_open_show_folder_not_found(client):
+    response = client.post("/api/shows/9999/open-folder")
     assert response.status_code == 404
 
 

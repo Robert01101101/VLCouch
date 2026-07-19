@@ -113,6 +113,35 @@ def extract_show_title_from_path(video_path: Path, tv_root: Path) -> str | None:
         return None
 
 
+def _is_season_folder(name: str) -> bool:
+    return bool(re.match(r"^season\s*\d+", name.strip(), re.IGNORECASE))
+
+
+def resolve_show_folder_path(video_path: Path, tv_roots: list[Path]) -> Path | None:
+    """Resolve the on-disk show folder from an episode file path."""
+    resolved = video_path.resolve()
+    for tv_root in tv_roots:
+        try:
+            tv_root_resolved = tv_root.resolve()
+            rel = resolved.relative_to(tv_root_resolved)
+        except ValueError:
+            continue
+
+        parts = rel.parts
+        if len(parts) < 2:
+            continue
+        if _is_category_folder(parts[0]):
+            if len(parts) < 3:
+                continue
+            return tv_root_resolved / parts[0] / parts[1]
+        return tv_root_resolved / parts[0]
+
+    parent = resolved.parent
+    if _is_season_folder(parent.name):
+        return parent.parent
+    return parent
+
+
 def movie_decade(year: int | None) -> str | None:
     if not year:
         return None

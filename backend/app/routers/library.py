@@ -8,8 +8,9 @@ from sqlalchemy import desc
 from sqlmodel import Session, select
 
 from app import settings_store
-from app.config import ROW_ITEM_LIMIT
+from app.config import ROW_ITEM_LIMIT, TEST_MODE
 from app.db import get_session
+from app.folder_picker import open_folder
 from app.genre_tags import TOP_GENRE_ROW_LIMIT, genre_row_id, parse_genres_json, top_movie_genres
 from app.library_progress import (
     episode_progress_fields,
@@ -20,7 +21,7 @@ from app.library_progress import (
     most_recent_watched_episode_on_show,
 )
 from app.models import Episode, Movie, Show, WatchProgress
-from app.scanner import extract_tv_category, movie_decade
+from app.scanner import extract_tv_category, movie_decade, resolve_show_folder_path
 from app.thumbnail_service import (
     queue_browse_poster_backfill,
     queue_hero_thumbnail,
@@ -377,12 +378,15 @@ def get_show(
         if settings_store.auto_generate_thumbnails():
             queue_show_episode_thumbnails(show_id, background_tasks)
 
+        media_folder = _resolve_show_folder_for_show(session, show_id)
+
         return {
             "id": show.id,
             "title": show.title,
             "overview": show.overview,
             "poster_url": _poster_url(show.poster_path),
             "category": show.category,
+            "media_folder": str(media_folder) if media_folder else None,
             "seasons": season_list,
         }
     except HTTPException:
@@ -392,6 +396,27 @@ def get_show(
         import logging
         logging.exception("Error fetching show %d: %s", show_id, str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/shows/{show_id}/open-folder")
+def open_show_folder(show_id: int, session: Session = Depends(get_session)):
+    show = session.get(Show, show_id)
+    if not show:
+        raise HTTPException(status_code=404, detail="Show not found")
+
+    folder = _resolve_show_folder_for_show(session, show_id)
+    if not folder:
+        raise HTTPException(status_code=404, detail="Media folder not found for show")
+
+    if not TEST_MODE:
+        if not folder.is_dir():
+            raise HTTPException(status_code=404, detail="Media folder does not exist on disk")
+        try:
+            open_folder(folder)
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return {"path": str(folder), "opened": not TEST_MODE}
 
 
 @router.get("/continue-watching")
@@ -687,11 +712,26 @@ def _recently_watched_items(session: Session) -> list[dict]:
     return result
 
 
+def _tv_roots() -> list[Path]:
+    return [
+        Path(root["path"])
+        for root in settings_store.media_roots()
+        if root.get("type") == "tv"
+    ]
+
+
 def _tv_root() -> Path | None:
-    for root in settings_store.media_roots():
-        if root.get("type") == "tv":
-            return Path(root["path"])
-    return None
+    roots = _tv_roots()
+    return roots[0] if roots else None
+
+
+def _resolve_show_folder_for_show(session: Session, show_id: int) -> Path | None:
+    episode = session.exec(
+        select(Episode).where(Episode.show_id == show_id)
+    ).first()
+    if not episode:
+        return None
+    return resolve_show_folder_path(Path(episode.file_path), _tv_roots())
 
 
 def _backfill_show_categories(session: Session) -> None:

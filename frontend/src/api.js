@@ -51,6 +51,17 @@ export async function fetchShow(id) {
   return res.json()
 }
 
+export async function openShowFolder(showId) {
+  const res = await fetch(`${API_BASE}/api/shows/${showId}/open-folder`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || 'Failed to open media folder')
+  }
+  return res.json()
+}
+
 export async function fetchContinueWatching() {
   const res = await fetch(`${API_BASE}/api/continue-watching`)
   if (!res.ok) throw new Error('Failed to fetch continue watching')

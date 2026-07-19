@@ -21,6 +21,7 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | GET | `/api/movies` | `library.py` | `fetchMovies` |
 | GET | `/api/shows` | `library.py` | `fetchShows` |
 | GET | `/api/shows/{id}` | `library.py` | `fetchShow` |
+| POST | `/api/shows/{id}/open-folder` | `library.py` | `openShowFolder` |
 | GET | `/api/search` | `library.py` | `searchLibrary` |
 | GET | `/api/continue-watching` | `library.py` | `fetchContinueWatching` |
 | POST | `/api/play/{item_type}/{item_id}` | `play.py` | `playItem` |

@@ -13,6 +13,7 @@ test.describe('Show detail', () => {
     await expect(page.getByTestId('show-detail')).toBeVisible()
     await expect(page.getByTestId('nav-home')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Breaking Bad' })).toBeVisible()
+    await expect(page.getByTestId('open-show-folder')).toBeVisible()
 
     const watched = page.locator('[data-testid^="watched-episode-"]').first()
     await expect(watched).toBeAttached()

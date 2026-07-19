@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchShow, playItem, setSeasonWatchStatus, setShowWatchStatus, setWatchStatus } from '../api'
+import { fetchShow, openShowFolder, playItem, setSeasonWatchStatus, setShowWatchStatus, setWatchStatus } from '../api'
 import { sessionAppliesToShow, sessionPlayingEpisodeId, sessionProgressPercent, usePlaybackRefresh } from '../playbackRefresh'
 import { showMissingThumbnails, usePollForThumbnails } from '../thumbnailPolling'
 
@@ -13,6 +13,7 @@ export default function ShowDetail() {
   const [showUpdating, setShowUpdating] = useState(false)
   const [expandedSeasons, setExpandedSeasons] = useState({})
   const [playbackKick, setPlaybackKick] = useState(0)
+  const [openingFolder, setOpeningFolder] = useState(false)
   const showRef = useRef(show)
   showRef.current = show
 
@@ -57,6 +58,17 @@ export default function ShowDetail() {
 
   const playingEpisodeId = sessionPlayingEpisodeId(playbackSession)
   const playingProgressPercent = sessionProgressPercent(playbackSession)
+
+  async function handleOpenFolder() {
+    setOpeningFolder(true)
+    try {
+      await openShowFolder(show.id)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setOpeningFolder(false)
+    }
+  }
 
   async function handlePlay(episodeId) {
     try {
@@ -223,6 +235,17 @@ export default function ShowDetail() {
                 className="bg-couch-red hover:bg-couch-red-dark text-white font-semibold px-6 py-2 rounded transition-colors"
               >
                 {episodePlayLabel(upNext)}
+              </button>
+            )}
+            {show.media_folder && (
+              <button
+                type="button"
+                data-testid="open-show-folder"
+                disabled={openingFolder}
+                onClick={handleOpenFolder}
+                className="text-sm text-gray-300 hover:text-white border border-gray-600 hover:border-gray-400 px-4 py-2 rounded transition-colors disabled:opacity-50"
+              >
+                Open folder
               </button>
             )}
             <div className="ml-auto flex flex-wrap items-center gap-2">

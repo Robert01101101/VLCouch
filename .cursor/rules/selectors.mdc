@@ -73,6 +73,7 @@ Add `data-testid` to new interactive elements:
 | Poster watch progress bar | `{cardTestId}-progress` |
 | Episode play | `play-episode-{id}` |
 | Up-next play | `play-up-next` |
+| Open show media folder | `open-show-folder` |
 | Mark show watched | `mark-show-watched` |
 | Mark show unwatched | `mark-show-unwatched` |
 | Mark season watched | `mark-season-{n}-watched` |

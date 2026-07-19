@@ -10,6 +10,7 @@ from app.scanner import (
     extract_show_title_from_path,
     is_supplemental_content,
     parse_episode,
+    resolve_show_folder_path,
 )
 
 
@@ -148,6 +149,23 @@ def test_extract_show_title_from_simple_layout():
     tv_root = Path("D:/TV")
     path = Path("D:/TV/Breaking Bad/Season 01/file.mkv")
     assert extract_show_title_from_path(path, tv_root) == "Breaking Bad"
+
+
+def test_resolve_show_folder_from_bracketed_category():
+    tv_root = Path("D:/TV")
+    path = Path("D:/TV/[Sitcoms]/The Office/Season 1/file.mkv")
+    assert resolve_show_folder_path(path, [tv_root]) == Path("D:/TV/[Sitcoms]/The Office")
+
+
+def test_resolve_show_folder_from_simple_layout():
+    tv_root = Path("D:/TV")
+    path = Path("D:/TV/Breaking Bad/Season 01/file.mkv")
+    assert resolve_show_folder_path(path, [tv_root]) == Path("D:/TV/Breaking Bad")
+
+
+def test_resolve_show_folder_falls_back_to_parent_directory():
+    path = Path("c:/fixtures/tv/Breaking Bad/S01E01.mkv")
+    assert resolve_show_folder_path(path, []) == Path("c:/fixtures/tv/Breaking Bad")
 
 
 def test_parse_episode_uses_folder_title_for_featurettes():
