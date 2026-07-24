@@ -40,25 +40,28 @@ test.describe('Home page', () => {
     if (!(await markSeasonUnwatched.isVisible())) {
       await seasonHeading.click()
     }
-    if (await markSeasonUnwatched.isVisible()) {
-      await Promise.all([
-        page.waitForResponse((r) => r.url().includes('/seasons/1/watch-status') && r.ok()),
-        page.waitForResponse((r) => r.url().includes('/shows/') && r.request().method() === 'GET'),
-        markSeasonUnwatched.click(),
-      ])
-      if (!(await page.locator('[data-testid^="watched-episode-"]').first().isVisible())) {
-        await seasonHeading.click()
-      }
-    }
+    await expect(markSeasonUnwatched).toBeVisible({ timeout: 10000 })
 
-    const firstCheckbox = page.locator('[data-testid^="watched-episode-"]').first()
-    if (!(await firstCheckbox.isChecked())) {
-      await Promise.all([
-        page.waitForResponse((r) => r.url().includes('/watch-status') && r.ok()),
-        page.waitForResponse((r) => r.url().includes('/shows/') && r.request().method() === 'GET'),
-        page.getByLabel('Mark as watched').first().click(),
-      ])
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/seasons/1/watch-status') && r.ok()),
+      page.waitForResponse((r) => r.url().includes('/shows/') && r.request().method() === 'GET'),
+      markSeasonUnwatched.click(),
+    ])
+
+    const episodeCheckboxes = page.locator('[data-testid^="watched-episode-"]')
+    if (!(await episodeCheckboxes.first().isVisible())) {
+      await seasonHeading.click()
     }
+    await expect(episodeCheckboxes.first()).toBeVisible({ timeout: 10000 })
+    await expect(episodeCheckboxes.nth(0)).not.toBeChecked()
+    await expect(episodeCheckboxes.nth(1)).not.toBeChecked()
+
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/watch-status') && r.ok()),
+      page.waitForResponse((r) => r.url().includes('/shows/') && r.request().method() === 'GET'),
+      page.getByLabel('Mark as watched').first().click(),
+    ])
+    await expect(episodeCheckboxes.nth(0)).toBeChecked()
 
     await page.getByTestId('nav-home').click()
     await expect(page.getByTestId('page-loading')).toBeHidden({ timeout: 15000 })
