@@ -7,6 +7,24 @@ $port = 8000
 $hostAddr = "127.0.0.1"
 $baseUrl = "http://${hostAddr}:$port"
 $python = Join-Path $root "backend\.venv\Scripts\python.exe"
+$installedPython = Join-Path $root "python\python.exe"
+$installMarker = Join-Path $root "install.json"
+$isInstalled = (Test-Path $installMarker) -or (Test-Path $installedPython)
+
+if ($isInstalled) {
+    $python = $installedPython
+    $dataDir = Join-Path $env:LOCALAPPDATA "VLCouch\data"
+    $env:VLCOUCH_DATA_DIR = $dataDir
+    New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+
+    $legacyData = Join-Path $root "backend\data"
+    $legacyDb = Join-Path $legacyData "library.db"
+    $targetDb = Join-Path $dataDir "library.db"
+    if ((Test-Path $legacyDb) -and -not (Test-Path $targetDb)) {
+        Write-Host "Migrating library data to $dataDir..."
+        Copy-Item -Path (Join-Path $legacyData "*") -Destination $dataDir -Recurse -Force
+    }
+}
 
 function Show-Error([string]$message) {
     Add-Type -AssemblyName System.Windows.Forms
@@ -61,6 +79,9 @@ function Start-AppServer {
     Remove-Item Env:TEST_POSTERS_DIR -ErrorAction SilentlyContinue
 
     if (-not (Test-Path $python)) {
+        if ($isInstalled) {
+            Exit-WithError "VLCouch installation is incomplete (Python runtime missing).`nRe-run the VLCouch installer."
+        }
         Exit-WithError @"
 Python environment is not set up.
 
@@ -70,6 +91,9 @@ Run this once from the project folder:
     }
 
     if (-not (Test-Path (Join-Path $root "frontend\dist\index.html"))) {
+        if ($isInstalled) {
+            Exit-WithError "VLCouch installation is incomplete (frontend missing).`nRe-run the VLCouch installer."
+        }
         Exit-WithError @"
 Frontend build is missing.
 

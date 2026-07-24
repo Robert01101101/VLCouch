@@ -14,15 +14,15 @@ APP_ENV = os.getenv("APP_ENV", "production")
 IS_TEST = APP_ENV == "test"
 TEST_MODE = os.getenv("TEST_MODE", "false").lower() in ("1", "true", "yes")
 
-DATA_DIR = BASE_DIR / "data"
-POSTERS_DIR = DATA_DIR / "posters"
-
 if IS_TEST:
     _test_tmp = BASE_DIR / "tests" / ".tmp"
     _test_tmp.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = Path(os.getenv("TEST_DB_PATH", _test_tmp / "library.db")).parent
     DB_PATH = Path(os.getenv("TEST_DB_PATH", _test_tmp / "library.db"))
     POSTERS_DIR = Path(os.getenv("TEST_POSTERS_DIR", _test_tmp / "posters"))
 else:
+    _data_override = os.getenv("VLCOUCH_DATA_DIR")
+    DATA_DIR = Path(_data_override) if _data_override else BASE_DIR / "data"
     DB_PATH = DATA_DIR / "library.db"
     POSTERS_DIR = DATA_DIR / "posters"
 
