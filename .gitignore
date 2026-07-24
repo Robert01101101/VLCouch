@@ -24,6 +24,9 @@ frontend/dist/
 frontend/node_modules/
 node_modules/
 
+# Windows installer packaging output
+dist/
+
 # Test / coverage
 .coverage
 htmlcov/

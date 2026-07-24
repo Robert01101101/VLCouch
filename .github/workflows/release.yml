@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -match '^v(.+)$') {
+            $version = $Matches[1]
+          } else {
+            throw "Tag must start with v (got $tag)"
+          }
+          $fileVersion = (Get-Content VERSION -Raw).Trim()
+          if ($fileVersion -ne $version) {
+            throw "Tag version $version does not match VERSION file ($fileVersion)"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Package application
+        shell: pwsh
+        run: .\scripts\package.ps1
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=$version install\VLCouch.iss
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: VLCouch ${{ steps.version.outputs.version }}
+          files: dist/installer/VLCouchSetup-${{ steps.version.outputs.version }}.exe
+          generate_release_notes: true
