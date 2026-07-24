@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import app.settings_store as settings_store
 from app.metadata import enrich_show, lookup_overview
@@ -181,3 +181,32 @@ def test_install_dependency_already_installed(mock_installed):
 
     assert result["started"] is False
     assert result["already_installed"] is True
+
+
+def test_get_update_status_skips_in_test_mode(client):
+    response = client.get("/api/update")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["checked"] is False
+    assert data["update_available"] is False
+    assert data["current_version"] == settings_store.APP_VERSION
+
+
+@patch("app.routers.settings.check_for_update", new_callable=AsyncMock)
+def test_get_update_status_refresh(mock_check, client):
+    mock_check.return_value = {
+        "checked": True,
+        "update_available": True,
+        "current_version": "0.1.0",
+        "latest_version": "0.2.0",
+        "download_url": "https://example.com/VLCouchSetup-0.2.0.exe",
+        "release_url": "https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0",
+        "error": None,
+    }
+
+    response = client.get("/api/update?refresh=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["update_available"] is True
+    assert data["latest_version"] == "0.2.0"
+    mock_check.assert_awaited_once_with(force=True)

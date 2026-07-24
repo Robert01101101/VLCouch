@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -15,6 +16,7 @@ from app.playback_service import sweep_stale_sessions
 from app.routers import library, play, settings, watch
 from app.thumbnail_service import queue_all_thumbnails_backfill
 from app.thumbnails import ensure_thumbnail_cache_current_on_startup
+from app.update_check import schedule_startup_check
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,6 +62,7 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
             logger.info("Skipping startup scan")
             if settings_store.auto_generate_thumbnails():
                 queue_all_thumbnails_backfill()
+        asyncio.create_task(schedule_startup_check())
         yield
         stop_poller()
 

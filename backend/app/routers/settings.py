@@ -8,6 +8,7 @@ from app.db import get_session
 from app.dependencies import DEPENDENCIES, install_dependency
 from app.folder_picker import pick_folder
 from app.thumbnail_service import queue_all_thumbnails_backfill
+from app.update_check import check_for_update
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -36,6 +37,11 @@ class MediaRootsUpdate(BaseModel):
 @router.get("/settings")
 def get_settings(session: Session = Depends(get_session)):
     return settings_store.get_settings_payload(session)
+
+
+@router.get("/update")
+async def get_update_status(refresh: bool = False):
+    return await check_for_update(force=refresh)
 
 
 @router.patch("/settings")

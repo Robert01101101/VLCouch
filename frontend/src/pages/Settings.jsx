@@ -4,6 +4,7 @@ import {
   fetchScanStatus,
   fetchSettings,
   fetchMediaRoots,
+  fetchUpdateStatus,
   installDependency,
   resetBrowseSession,
   updateSettings,
@@ -143,6 +144,8 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
   const [thumbnailNotice, setThumbnailNotice] = useState(null)
   const [installingDep, setInstallingDep] = useState(null)
   const [installNotice, setInstallNotice] = useState(null)
+  const [updateStatus, setUpdateStatus] = useState(null)
+  const [checkingUpdates, setCheckingUpdates] = useState(false)
 
   const isDevMode =
     import.meta.env.MODE === 'development' || import.meta.env.APP_ENV === 'development'
@@ -151,15 +154,19 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
     setLoading(true)
     try {
       setError(null)
-      const [settingsData, mediaRootsData, statusData] = await Promise.all([
+      const [settingsData, mediaRootsData, statusData, updateData] = await Promise.all([
         fetchSettings(),
         fetchMediaRoots(),
         fetchScanStatus().catch(() => null),
+        fetchUpdateStatus().catch(() => null),
       ])
       setSettings(settingsData)
       setMediaRoots(mediaRootsData.roots || [])
       if (statusData) {
         setScanStatus(statusData)
+      }
+      if (updateData) {
+        setUpdateStatus(updateData)
       }
     } catch (e) {
       setError(e.message)
@@ -222,6 +229,19 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
       setInstallNotice(null)
     } catch (e) {
       setActionError(e.message)
+    }
+  }
+
+  async function handleCheckUpdates() {
+    setActionError(null)
+    setCheckingUpdates(true)
+    try {
+      const updateData = await fetchUpdateStatus({ refresh: true })
+      setUpdateStatus(updateData)
+    } catch (e) {
+      setActionError(e.message)
+    } finally {
+      setCheckingUpdates(false)
     }
   }
 
@@ -494,6 +514,30 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
       <section>
         <h2 className="text-lg font-semibold text-gray-300 mb-4">About</h2>
         <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5 space-y-3">
+          {updateStatus?.update_available && (
+            <div
+              data-testid="settings-update-available"
+              className="rounded-lg border border-couch-red/40 bg-couch-red/10 px-4 py-3 text-sm text-gray-200"
+            >
+              <p>
+                Version{' '}
+                <span className="font-medium text-white">{updateStatus.latest_version}</span> is
+                available.
+              </p>
+              {(updateStatus.download_url || updateStatus.release_url) && (
+                <a
+                  href={updateStatus.download_url || updateStatus.release_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="settings-update-download"
+                  className="mt-2 inline-block rounded bg-couch-red px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-couch-red-dark"
+                >
+                  Download update
+                </a>
+              )}
+            </div>
+          )}
+
           <p className="text-sm text-gray-300">
             Version{' '}
             <span data-testid="settings-version" className="text-white">
@@ -523,6 +567,23 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
           >
             View on GitHub
           </a>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              data-testid="settings-check-updates"
+              onClick={handleCheckUpdates}
+              disabled={checkingUpdates}
+              className="rounded border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-700 disabled:opacity-50"
+            >
+              {checkingUpdates ? 'Checking...' : 'Check for updates'}
+            </button>
+            {updateStatus?.checked && !updateStatus.update_available && (
+              <p className="text-sm text-gray-400" data-testid="settings-update-current">
+                You are on the latest version.
+              </p>
+            )}
+          </div>
         </div>
       </section>
     </div>

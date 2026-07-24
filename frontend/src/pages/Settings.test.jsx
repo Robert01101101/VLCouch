@@ -34,6 +34,15 @@ describe('Settings', () => {
     api.fetchSettings.mockResolvedValue(defaultSettings)
     api.fetchMediaRoots.mockResolvedValue({ roots: [] })
     api.fetchScanStatus.mockResolvedValue({ running: false, last_stats: null })
+    api.fetchUpdateStatus.mockResolvedValue({
+      checked: true,
+      update_available: false,
+      current_version: '0.1.0',
+      latest_version: '0.1.0',
+      download_url: null,
+      release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+      error: null,
+    })
     api.updateSettings.mockImplementation(async (patch) => ({
       ...defaultSettings,
       ...patch,
@@ -276,6 +285,54 @@ describe('Settings', () => {
     })
     expect(await screen.findByTestId('settings-install-notice')).toHaveTextContent(
       'Installation started'
+    )
+  })
+
+  it('shows update available banner', async () => {
+    api.fetchUpdateStatus.mockResolvedValue({
+      checked: true,
+      update_available: true,
+      current_version: '0.1.0',
+      latest_version: '0.2.0',
+      download_url: 'https://example.com/VLCouchSetup-0.2.0.exe',
+      release_url: 'https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0',
+      error: null,
+    })
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    expect(await screen.findByTestId('settings-update-available')).toHaveTextContent('0.2.0')
+    expect(screen.getByTestId('settings-update-download')).toHaveAttribute(
+      'href',
+      'https://example.com/VLCouchSetup-0.2.0.exe'
+    )
+  })
+
+  it('checks for updates on demand', async () => {
+    api.fetchUpdateStatus
+      .mockResolvedValueOnce({
+        checked: true,
+        update_available: false,
+        current_version: '0.1.0',
+        latest_version: '0.1.0',
+        download_url: null,
+        release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        checked: true,
+        update_available: false,
+        current_version: '0.1.0',
+        latest_version: '0.1.0',
+        download_url: null,
+        release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+        error: null,
+      })
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    fireEvent.click(await screen.findByTestId('settings-check-updates'))
+    await waitFor(() => {
+      expect(api.fetchUpdateStatus).toHaveBeenLastCalledWith({ refresh: true })
+    })
+    expect(await screen.findByTestId('settings-update-current')).toHaveTextContent(
+      'latest version'
     )
   })
 })

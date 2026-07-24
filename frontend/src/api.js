@@ -160,6 +160,14 @@ export async function fetchSettings() {
   return res.json()
 }
 
+export async function fetchUpdateStatus({ refresh = false } = {}) {
+  const params = refresh ? new URLSearchParams({ refresh: 'true' }) : null
+  const query = params ? `?${params}` : ''
+  const res = await fetch(`${API_BASE}/api/update${query}`)
+  if (!res.ok) throw new Error('Failed to check for updates')
+  return res.json()
+}
+
 export async function updateSettings(patch) {
   const res = await fetch(`${API_BASE}/api/settings`, {
     method: 'PATCH',

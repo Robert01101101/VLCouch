@@ -54,6 +54,10 @@ Add `data-testid` to new interactive elements:
 | Settings dependencies refresh | `settings-dependencies-refresh` |
 | Settings install notice | `settings-install-notice` |
 | Settings version | `settings-version` |
+| Settings update available | `settings-update-available` |
+| Settings update download | `settings-update-download` |
+| Settings check updates | `settings-check-updates` |
+| Settings update current | `settings-update-current` |
 | GitHub link | `settings-github-link` |
 | Rescan button | `rescan-library` |
 | Settings media folders list | `settings-media-folders` |

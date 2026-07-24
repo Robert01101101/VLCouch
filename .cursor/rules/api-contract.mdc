@@ -32,6 +32,7 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | POST | `/api/scan` | `main.py` | `triggerScan` |
 | GET | `/api/scan/status` | `main.py` | `fetchScanStatus` |
 | GET | `/api/settings` | `settings.py` | `fetchSettings` |
+| GET | `/api/update` | `settings.py` | `fetchUpdateStatus` |
 | PATCH | `/api/settings` | `settings.py` | `updateSettings` |
 | GET | `/api/media-roots` | `settings.py` | `fetchMediaRoots` |
 | PUT | `/api/media-roots` | `settings.py` | `updateMediaRoots` |
