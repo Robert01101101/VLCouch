@@ -39,6 +39,25 @@ With the backend running, inspect all endpoints and schemas at **http://localhos
 | Unit tests only | `.\scripts\test.ps1 -Layer unit` |
 | E2E tests only | `.\scripts\test.ps1 -Layer e2e` |
 | Manual scan smoke | `cd backend; python scripts/smoke_scan.py` |
+| Package Windows installer | `.\scripts\package.ps1` (assembles `dist/staging/`) |
+
+## Windows installer (releases)
+
+End-user installs use an Inno Setup `.exe` built in CI on version tags:
+
+| Path | Purpose |
+|------|---------|
+| `%LOCALAPPDATA%\VLCouch\app\` | Application files (replaced on upgrade) |
+| `%LOCALAPPDATA%\VLCouch\data\` | Library DB, posters, playlists (preserved) |
+
+- Version source: [`VERSION`](VERSION) at repo root; runtime reads [`backend/app/version.py`](backend/app/version.py)
+- Packaging: [`scripts/package.ps1`](scripts/package.ps1) — embeddable Python 3.12, pip deps, built frontend
+- Installer script: [`install/VLCouch.iss`](install/VLCouch.iss)
+- Release workflow: [`.github/workflows/release.yml`](.github/workflows/release.yml) — push tag `vX.Y.Z` (must match `VERSION`)
+- Update notifications: [`backend/app/update_check.py`](backend/app/update_check.py) + `GET /api/update` + Settings About banner
+- Installed launcher sets `VLCOUCH_DATA_DIR` via [`scripts/start.ps1`](scripts/start.ps1)
+
+Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 
 ## Where to edit
 
@@ -51,6 +70,8 @@ With the backend running, inspect all endpoints and schemas at **http://localhos
 | VLC launch + playback tracking | `backend/app/routers/play.py`, `backend/app/vlc.py`, `backend/app/playback_service.py`, `backend/app/playback_poller.py`, `backend/app/vlc_http.py`, `backend/app/vlc_playlist.py` |
 | Watch status + resume position | `backend/app/routers/watch.py`, `backend/app/watch_service.py`, `backend/app/library_progress.py` |
 | Settings persistence | `backend/app/routers/settings.py`, `backend/app/settings_store.py` |
+| Update check | `backend/app/update_check.py` |
+| Windows packaging / installer | `scripts/package.ps1`, `install/VLCouch.iss` |
 | Wikipedia metadata | `backend/app/metadata.py` |
 | DB models | `backend/app/models.py`, `backend/app/db.py` |
 | App startup, scan trigger | `backend/app/main.py` |
@@ -135,6 +156,7 @@ Skills in `.cursor/skills/` guide verification and common workflows:
 | `add-api-endpoint` | New backend route end-to-end (router, tests, UI) |
 | `maintain-agent-docs` | Sync AGENTS.md, selectors, verify skills, CONTRIBUTING.md |
 | `generate-commit-message` | Draft commit message from the diff before committing |
+| `release-version` | Cut a Windows release — bump VERSION, tag `vX.Y.Z`, publish installer via CI |
 
 ## Related docs
 
