@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from app.vlc import _http_launch_args, _launch_vlc_process, _subtitle_launch_args, _vlc_launch_env
+from app.vlc import _http_launch_args, _launch_vlc_process, _subtitle_launch_args, _vlc_launch_env, find_vlc_path
 
 
 def test_http_launch_args_include_qt_intf():
@@ -75,3 +75,11 @@ def test_launch_vlc_process_uses_install_dir_cwd(mock_find, mock_env, mock_popen
     kwargs = mock_popen.call_args.kwargs
     assert kwargs["cwd"] == r"C:\VLC"
     assert kwargs["env"]["VLC_PLUGIN_PATH"] == r"C:\VLC\plugins"
+
+
+@patch("app.vlc.sys.platform", "linux")
+@patch("app.vlc.VLC_PATH", "")
+@patch("app.vlc.shutil.which", return_value="/usr/bin/vlc")
+def test_find_vlc_path_uses_path_on_linux(mock_which):
+    assert find_vlc_path() == "/usr/bin/vlc"
+    mock_which.assert_any_call("vlc")

@@ -1,9 +1,15 @@
 import logging
 import os
+import shutil
 import subprocess
+import sys
 import uuid
-import winreg
 from pathlib import Path
+
+if sys.platform == "win32":
+    import winreg
+else:
+    winreg = None  # type: ignore[assignment]
 
 from sqlmodel import Session
 
@@ -33,23 +39,31 @@ DEFAULT_VLC_PATHS = [
 
 
 def find_vlc_path() -> str | None:
-    """Locate vlc.exe on Windows."""
+    """Locate the VLC executable."""
     if VLC_PATH and Path(VLC_PATH).exists():
         return VLC_PATH
 
-    try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\VideoLAN\VLC")
-        install_dir, _ = winreg.QueryValueEx(key, "InstallDir")
-        winreg.CloseKey(key)
-        vlc = Path(install_dir) / "vlc.exe"
-        if vlc.exists():
-            return str(vlc)
-    except OSError:
-        pass
+    if sys.platform == "win32":
+        try:
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\VideoLAN\VLC")
+            install_dir, _ = winreg.QueryValueEx(key, "InstallDir")
+            winreg.CloseKey(key)
+            vlc = Path(install_dir) / "vlc.exe"
+            if vlc.exists():
+                return str(vlc)
+        except OSError:
+            pass
 
-    for path in DEFAULT_VLC_PATHS:
-        if path.exists():
-            return str(path)
+        for path in DEFAULT_VLC_PATHS:
+            if path.exists():
+                return str(path)
+
+        return None
+
+    for name in ("vlc", "cvlc"):
+        found = shutil.which(name)
+        if found:
+            return found
 
     return None
 
@@ -119,16 +133,20 @@ def _launch_vlc_process(cmd: list[str]) -> int | None:
     install_dir = vlc_path.parent
     launch_env = _vlc_launch_env(install_dir)
     full_cmd = [str(vlc_path), *cmd]
-    creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-    proc = subprocess.Popen(
-        full_cmd,
-        cwd=str(install_dir),
-        env=launch_env,
-        creationflags=creationflags,
-        close_fds=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    popen_kwargs: dict = {
+        "cwd": str(install_dir),
+        "env": launch_env,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = (
+            subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        )
+        popen_kwargs["close_fds"] = True
+    else:
+        popen_kwargs["start_new_session"] = True
+    proc = subprocess.Popen(full_cmd, **popen_kwargs)
     logger.info("Launched VLC from %s (pid %s)", install_dir, proc.pid)
     return proc.pid
 
