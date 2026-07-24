@@ -7,16 +7,16 @@ from pathlib import Path
 
 from sqlmodel import Session
 
+from app import settings_store
 from app.config import PLAYLISTS_DIR, TEST_MODE, VLC_PATH
 from app.library_progress import remaining_unwatched_episodes
-from app.models import Episode, Movie
-from app import settings_store
+from app.models import Episode
+from app.playback_poller import start_poller
 from app.playback_service import (
     create_session,
     generate_http_password,
     resolve_playable,
 )
-from app.playback_poller import start_poller
 from app.vlc_http import allocate_http_port
 from app.vlc_playlist import build_m3u
 from app.watch_service import get_resume_position

@@ -32,6 +32,10 @@ function renderShow() {
   )
 }
 
+async function waitForEpisodes() {
+  await screen.findByTestId('play-episode-10')
+}
+
 describe('ShowDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -42,6 +46,7 @@ describe('ShowDetail', () => {
   it('renders episode list', async () => {
     renderShow()
     await screen.findByTestId('show-detail')
+    await waitForEpisodes()
     expect(screen.getByRole('heading', { level: 1, name: 'Breaking Bad' })).toBeInTheDocument()
     expect(screen.getByText('Pilot')).toBeInTheDocument()
     expect(screen.getByTestId('watched-episode-10')).toBeInTheDocument()
@@ -51,6 +56,7 @@ describe('ShowDetail', () => {
     api.setWatchStatus.mockResolvedValue({ watched: true })
     renderShow()
     await screen.findByTestId('show-detail')
+    await waitForEpisodes()
     fireEvent.click(screen.getByTestId('watched-episode-10'))
     await waitFor(() => {
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 10, true)
@@ -62,7 +68,7 @@ describe('ShowDetail', () => {
     api.playItem.mockResolvedValue({})
     renderShow()
     await screen.findByTestId('show-detail')
-    fireEvent.click(screen.getByTestId('play-episode-10'))
+    fireEvent.click(await screen.findByTestId('play-episode-10'))
     await waitFor(() => {
       expect(api.playItem).toHaveBeenCalledWith('episode', 10)
     })
@@ -95,7 +101,7 @@ describe('ShowDetail', () => {
     api.setSeasonWatchStatus.mockResolvedValue({ watched: true, updated_count: 2 })
     renderShow()
     await screen.findByTestId('show-detail')
-    fireEvent.click(screen.getByTestId('mark-season-1-watched'))
+    fireEvent.click(await screen.findByTestId('mark-season-1-watched'))
     await waitFor(() => {
       expect(api.setSeasonWatchStatus).toHaveBeenCalledWith(1, 1, true)
     })
@@ -105,7 +111,7 @@ describe('ShowDetail', () => {
     api.setSeasonWatchStatus.mockResolvedValue({ watched: false, updated_count: 2 })
     renderShow()
     await screen.findByTestId('show-detail')
-    fireEvent.click(screen.getByTestId('mark-season-1-unwatched'))
+    fireEvent.click(await screen.findByTestId('mark-season-1-unwatched'))
     await waitFor(() => {
       expect(api.setSeasonWatchStatus).toHaveBeenCalledWith(1, 1, false)
     })
@@ -118,7 +124,7 @@ describe('ShowDetail', () => {
     api.setWatchStatus.mockResolvedValue({ watched: true })
     renderShow()
     await screen.findByTestId('show-detail')
-    fireEvent.click(screen.getByTestId('mark-season-1-watched'))
+    fireEvent.click(await screen.findByTestId('mark-season-1-watched'))
     await waitFor(() => {
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 10, true)
       expect(api.setWatchStatus).toHaveBeenCalledWith('episode', 11, true)
@@ -157,6 +163,7 @@ describe('ShowDetail', () => {
 
     renderShow()
     await screen.findByTestId('show-detail')
+    await waitForEpisodes()
     expect(screen.getByTestId('play-episode-10')).toHaveAttribute('data-playing', 'true')
     expect(screen.getByTestId('play-episode-11')).not.toHaveClass('ring-couch-red')
     const progressBar = screen.getByTestId('episode-progress-10').firstChild

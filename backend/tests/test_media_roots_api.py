@@ -81,7 +81,7 @@ def test_media_roots_used_by_scan(empty_client, tmp_path):
         },
     )
 
-    with Session(db.engine) as session:
+    with Session(db.engine):
         assert settings_store.media_roots()[0]["path"] == str(movies_dir)
 
     response = empty_client.post("/api/scan")

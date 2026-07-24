@@ -1,5 +1,4 @@
 import importlib
-import os
 
 
 def test_vlcouch_data_dir_override(monkeypatch, tmp_path):

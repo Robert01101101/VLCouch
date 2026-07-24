@@ -11,8 +11,9 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 import app.db as db
-from app.config import PLAYLISTS_DIR, TEST_MODE
 from app import settings_store
+from app.config import PLAYLISTS_DIR, TEST_MODE
+from app.library_progress import progress_percent
 from app.models import Episode, Movie, PlaybackSession, PlaybackSessionItem
 from app.vlc_http import (
     VlcStatus,
@@ -22,7 +23,6 @@ from app.vlc_http import (
     is_playback_complete,
     terminate_pid,
 )
-from app.library_progress import progress_percent
 from app.watch_service import mark_completed, touch_play_started, update_position
 
 logger = logging.getLogger(__name__)

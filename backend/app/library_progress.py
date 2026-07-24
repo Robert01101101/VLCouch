@@ -8,7 +8,7 @@ from sqlalchemy import desc
 from sqlmodel import Session, select
 
 from app.config import PLAYBACK_MIN_RESUME_SECONDS
-from app.models import Episode, Movie, WatchProgress
+from app.models import Episode, WatchProgress
 
 
 def is_episode_watched(session: Session, episode_id: int) -> bool:
