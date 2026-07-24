@@ -7,9 +7,10 @@ from app.config import MEDIA_ROOTS, METADATA_ENABLED, SCAN_ON_STARTUP
 from app.dependencies import DEPENDENCIES, winget_available
 from app.models import AppSetting, Episode, Movie, Show
 from app.thumbnails import ffmpeg_available
+from app.version import load_app_version
 from app.vlc import find_vlc_path
 
-APP_VERSION = "0.1.0"
+APP_VERSION = load_app_version()
 GITHUB_URL = "https://github.com/Robert01101101/VLCouch"
 
 KEY_METADATA_ENABLED = "metadata_enabled"
