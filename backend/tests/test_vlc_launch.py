@@ -1,6 +1,12 @@
 from unittest.mock import MagicMock, patch
 
-from app.vlc import _http_launch_args, _launch_vlc_process, _subtitle_launch_args, _vlc_launch_env, find_vlc_path
+from app.vlc import (
+    _http_launch_args,
+    _launch_vlc_process,
+    _subtitle_launch_args,
+    _vlc_launch_env,
+    find_vlc_path,
+)
 
 
 def test_http_launch_args_include_qt_intf():
