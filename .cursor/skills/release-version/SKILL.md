@@ -30,6 +30,15 @@ Load this skill immediately if the user says anything like:
 
 Do **not** edit `VERSION` or create a version commit without following the **mandatory workflow** below.
 
+## CI on pull requests
+
+[`.github/workflows/test.yml`](.github/workflows/test.yml) runs a **single** check on every PR and push to `main`/`master`:
+
+1. **Ruff** — `python -m ruff check backend/app backend/tests`
+2. **Full test suite** — `.\scripts\test.ps1 -Layer all` (api + unit + e2e)
+
+Tag pushes do **not** run this workflow; they trigger [`.github/workflows/release.yml`](.github/workflows/release.yml) (installer build only). Run the full suite locally before tagging — CI on the merged PR is the gate.
+
 ## Mandatory workflow (version bump + commit)
 
 Use this order every time. **Do not commit until step 4 passes.**
@@ -37,7 +46,7 @@ Use this order every time. **Do not commit until step 4 passes.**
 ```
 1. Bump VERSION
 2. Sync E2E version spec (verify, fix if needed)
-3. Run full test suite (.\scripts\test.ps1 -Layer all)
+3. Run full test suite locally (.\scripts\test.ps1 -Layer all) — same as PR CI
 4. Commit version bump ONLY if all tests passed
 ```
 
@@ -82,13 +91,14 @@ After a correct setup, bumping `VERSION` alone updates what E2E expects. No sepa
 
 ### Step 3 — Run the complete test suite
 
-From repo root (required before any version commit):
+From repo root (required before any version commit). This matches what PR CI runs in `test.yml` (ruff + full suite):
 
 ```powershell
+python -m ruff check backend/app backend/tests --config backend/pyproject.toml
 .\scripts\test.ps1 -Layer all
 ```
 
-All layers must pass: **api**, **unit**, and **e2e**.
+All layers must pass: **ruff**, **api**, **unit**, and **e2e**.
 
 If anything fails, fix failures and re-run from step 3. Do not commit the version bump while red.
 
@@ -114,7 +124,7 @@ Use after the mandatory workflow above when the user wants a published release:
 Release v____:
 - [ ] 1. Bump VERSION (workflow step 1)
 - [ ] 2. Sync E2E version spec (workflow step 2)
-- [ ] 3. Run full test suite — all green (workflow step 3)
+- [ ] 3. Run ruff + full test suite — all green (workflow step 3; same as PR CI)
 - [ ] 4. Commit version bump (workflow step 4)
 - [ ] 5. (Recommended) Local package smoke test
 - [ ] 6. Push to main (or merge PR first)

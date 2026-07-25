@@ -77,6 +77,7 @@ def test_order_row_items_random_when_enabled():
             third = _order_row_items(items, browse_session="session-b", row_id="movies-1990s")
 
     assert first == second
+    assert third == first  # same shuffle mock; different session uses different seed
     assert [item["title"] for item in first] == ["Zulu", "Mike", "Alpha"]
     expected_seed = hash(("session-a", "movies-1990s")) & 0xFFFFFFFF
     different_seed = hash(("session-b", "movies-1990s")) & 0xFFFFFFFF
