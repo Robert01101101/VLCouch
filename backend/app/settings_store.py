@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app.config import MEDIA_ROOTS, METADATA_ENABLED, SCAN_ON_STARTUP
 from app.dependencies import DEPENDENCIES, winget_available
 from app.models import AppSetting, Episode, Movie, Show
-from app.thumbnails import ffmpeg_available
+from app.thumbnails import find_ffmpeg_path
 from app.version import load_app_version
 from app.vlc import find_vlc_path
 
@@ -188,11 +188,13 @@ def _library_counts(session: Session) -> dict:
 
 def get_diagnostics(session: Session) -> dict:
     vlc_path = find_vlc_path()
+    ffmpeg_path = find_ffmpeg_path()
     return {
         "vlc_path": vlc_path,
         "vlc_found": vlc_path is not None,
         "vlc_download_url": DEPENDENCIES["vlc"]["download_url"],
-        "ffmpeg_available": ffmpeg_available(),
+        "ffmpeg_available": ffmpeg_path is not None,
+        "ffmpeg_path": ffmpeg_path,
         "ffmpeg_download_url": DEPENDENCIES["ffmpeg"]["download_url"],
         "winget_available": winget_available(),
         "library_counts": _library_counts(session),

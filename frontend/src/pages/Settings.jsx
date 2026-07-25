@@ -330,6 +330,7 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
             label="ffmpeg"
             description="Extracts poster and episode thumbnails from your video files."
             installed={diagnostics?.ffmpeg_available}
+            path={diagnostics?.ffmpeg_path}
             downloadUrl={diagnostics?.ffmpeg_download_url}
             installing={installingDep === 'ffmpeg'}
             canInstall={diagnostics?.winget_available}

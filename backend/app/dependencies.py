@@ -72,6 +72,7 @@ def install_dependency(name: str) -> dict:
         "started": True,
         "message": (
             f"Installing {DEPENDENCIES[name]['label']}. Complete any prompts in the "
-            "installer window, then refresh status below."
+            "installer window, then click Refresh status below. If still not detected, "
+            "fully quit and relaunch VLCouch."
         ),
     }

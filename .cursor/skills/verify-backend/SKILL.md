@@ -34,6 +34,7 @@ After any change under `backend/app/` — routers, models, scanner, config, VLC/
 | `test_play_api.py` | play endpoint, TEST_MODE VLC skip |
 | `test_settings_api.py` | GET/PATCH settings |
 | `test_thumbnails.py` | thumbnail cache, seek logic, cache version |
+| `test_ffmpeg_detection.py` | ffmpeg path detection, winget fallbacks |
 | `test_scanner.py` | scan_library against fixture media (see `verify-scanner` skill) |
 
 ## Self-correction loop
