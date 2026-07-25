@@ -49,6 +49,7 @@ Add `data-testid` to new interactive elements:
 | Settings dependency VLC install | `settings-dependency-vlc-install` |
 | Settings dependency ffmpeg row | `settings-dependency-ffmpeg` |
 | Settings dependency ffmpeg status | `settings-dependency-ffmpeg-status` |
+| Settings dependency ffmpeg path | `settings-dependency-ffmpeg-path` |
 | Settings dependency ffmpeg download | `settings-dependency-ffmpeg-download` |
 | Settings dependency ffmpeg install | `settings-dependency-ffmpeg-install` |
 | Settings dependencies refresh | `settings-dependencies-refresh` |

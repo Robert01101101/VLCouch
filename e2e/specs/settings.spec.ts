@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test'
+import { appVersion, versionPattern } from '../helpers/appVersion'
+
+const version = appVersion()
 
 test.describe('Settings page', () => {
   test('loads settings and shows controls', async ({ page }) => {
@@ -19,7 +22,7 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('settings-simple-vlc-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-dependencies')).toBeVisible()
     await expect(page.getByTestId('settings-diagnostics')).toBeVisible()
-    await expect(page.getByTestId('settings-version')).toHaveText(/0\.1\.0/)
+    await expect(page.getByTestId('settings-version')).toHaveText(versionPattern(version))
     await expect(page.getByTestId('settings-github-link')).toBeVisible()
   })
 

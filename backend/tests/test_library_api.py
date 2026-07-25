@@ -53,7 +53,7 @@ def test_order_row_items_alphabetical_by_default():
 
 
 def test_order_row_items_random_when_enabled():
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     from app.routers.library import _order_row_items
 
@@ -63,12 +63,27 @@ def test_order_row_items_random_when_enabled():
         {"id": 3, "title": "Zulu"},
     ]
     with patch("app.routers.library.settings_store.browse_row_random", return_value=True):
-        first = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
-        second = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
-        third = _order_row_items(items, browse_session="session-b", row_id="movies-1990s")
+        with patch("app.routers.library.random.Random") as mock_random_cls:
+            mock_rng = MagicMock()
+
+            def shuffle_in_place(lst):
+                lst.reverse()
+
+            mock_rng.shuffle.side_effect = shuffle_in_place
+            mock_random_cls.return_value = mock_rng
+
+            first = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
+            second = _order_row_items(items, browse_session="session-a", row_id="movies-1990s")
+            third = _order_row_items(items, browse_session="session-b", row_id="movies-1990s")
+
     assert first == second
-    assert [item["title"] for item in first] != ["Alpha", "Mike", "Zulu"]
-    assert third != first or len(items) <= 1
+    assert third == first  # same shuffle mock; different session uses different seed
+    assert [item["title"] for item in first] == ["Zulu", "Mike", "Alpha"]
+    expected_seed = hash(("session-a", "movies-1990s")) & 0xFFFFFFFF
+    different_seed = hash(("session-b", "movies-1990s")) & 0xFFFFFFFF
+    assert mock_random_cls.call_args_list[0].args == (expected_seed,)
+    assert mock_random_cls.call_args_list[1].args == (expected_seed,)
+    assert mock_random_cls.call_args_list[2].args == (different_seed,)
 
 
 def test_browse_excludes_continue_watching_row(client):

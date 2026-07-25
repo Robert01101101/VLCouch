@@ -1,7 +1,9 @@
 import hashlib
 import logging
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from app.config import FFMPEG_PATH, POSTERS_DIR, THUMBNAIL_SKIP_SECONDS
@@ -116,15 +118,57 @@ def _clear_poster_paths_in_db() -> None:
             session.commit()
 
 
-def _find_ffmpeg() -> str | None:
+def _winget_link_dirs() -> list[Path]:
+    dirs: list[Path] = []
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        dirs.append(Path(local) / "Microsoft" / "WinGet" / "Links")
+    dirs.append(Path(r"C:\Program Files\WinGet\Links"))
+    return dirs
+
+
+def _winget_ffmpeg_package_bins() -> list[Path]:
+    local = os.environ.get("LOCALAPPDATA")
+    if not local:
+        return []
+    packages = Path(local) / "Microsoft" / "WinGet" / "Packages"
+    if not packages.is_dir():
+        return []
+    candidates = list(packages.glob("Gyan.FFmpeg*/**/bin/ffmpeg.exe"))
+    candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return candidates
+
+
+def find_ffmpeg_path() -> str | None:
+    """Locate ffmpeg.exe via env override, PATH, or common winget install locations."""
     if FFMPEG_PATH and Path(FFMPEG_PATH).exists():
         return FFMPEG_PATH
-    return shutil.which("ffmpeg")
+
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+
+    if sys.platform == "win32":
+        for links in _winget_link_dirs():
+            candidate = links / "ffmpeg.exe"
+            if candidate.exists():
+                return str(candidate)
+
+        for candidate in _winget_ffmpeg_package_bins():
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
+def _find_ffmpeg() -> str | None:
+    return find_ffmpeg_path()
 
 
 def _find_ffprobe() -> str | None:
-    if FFMPEG_PATH:
-        probe = Path(FFMPEG_PATH).parent / "ffprobe.exe"
+    ffmpeg = find_ffmpeg_path()
+    if ffmpeg:
+        probe = Path(ffmpeg).parent / "ffprobe.exe"
         if probe.exists():
             return str(probe)
     return shutil.which("ffprobe")

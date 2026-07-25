@@ -26,9 +26,23 @@ def test_normalize_tag():
     assert update_check._normalize_tag("v0.2.0") == "0.2.0"
 
 
-def test_pick_installer_asset():
+def test_pick_installer_asset_prefers_stable_filename():
     assets = [
         {"name": "notes.txt", "browser_download_url": "https://example.com/notes.txt"},
+        {
+            "name": "VLCouchSetup-0.2.0.exe",
+            "browser_download_url": "https://example.com/VLCouchSetup-0.2.0.exe",
+        },
+        {
+            "name": "VLCouchSetup.exe",
+            "browser_download_url": "https://example.com/VLCouchSetup.exe",
+        },
+    ]
+    assert update_check._pick_installer_asset(assets) == "https://example.com/VLCouchSetup.exe"
+
+
+def test_pick_installer_asset_falls_back_to_versioned_filename():
+    assets = [
         {
             "name": "VLCouchSetup-0.2.0.exe",
             "browser_download_url": "https://example.com/VLCouchSetup-0.2.0.exe",
@@ -54,8 +68,8 @@ def test_check_for_update_reports_newer_release(monkeypatch):
         "html_url": "https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0",
         "assets": [
             {
-                "name": "VLCouchSetup-0.2.0.exe",
-                "browser_download_url": "https://example.com/VLCouchSetup-0.2.0.exe",
+                "name": "VLCouchSetup.exe",
+                "browser_download_url": "https://example.com/VLCouchSetup.exe",
             }
         ],
     }
@@ -69,7 +83,7 @@ def test_check_for_update_reports_newer_release(monkeypatch):
     assert status["checked"] is True
     assert status["update_available"] is True
     assert status["latest_version"] == "0.2.0"
-    assert status["download_url"] == "https://example.com/VLCouchSetup-0.2.0.exe"
+    assert status["download_url"] == "https://example.com/VLCouchSetup.exe"
 
 
 def test_check_for_update_uses_cache(monkeypatch):

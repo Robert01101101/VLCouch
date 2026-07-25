@@ -31,17 +31,23 @@ Tests use fixture media under `backend/tests/fixtures/media/` with `APP_ENV=test
 
 See the **release-version** skill (`.cursor/skills/release-version/`) for the full agent workflow. Summary:
 
-1. Bump the version in [`VERSION`](VERSION) at the repo root.
-2. Commit and push to `main`.
-3. Create and push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`
-4. GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) builds `dist/staging/`, compiles `VLCouchSetup-{version}.exe` with Inno Setup, and attaches it to a GitHub Release.
+1. Bump [`VERSION`](VERSION) at the repo root.
+2. Ensure `e2e/specs/settings.spec.ts` uses `e2e/helpers/appVersion.ts` (no hardcoded semver).
+3. Run `.\scripts\test.ps1 -Layer all` — commit the bump **only if all tests pass**.
+4. Push to `main`, then create and push a matching tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+5. GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) builds `dist/staging/`, compiles `VLCouchSetup.exe`, and attaches it to a GitHub Release.
+
+Stable download URL for websites: `https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe`
+
+The E2E settings spec reads `VERSION` automatically (`e2e/helpers/appVersion.ts`). If you add new version assertions in tests, use that helper rather than hardcoding the semver.
 
 To test packaging locally (requires network for Python embeddable download):
 
 ```powershell
 .\scripts\package.ps1
 # Then, with Inno Setup 6 installed:
-& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=0.1.0 install\VLCouch.iss
+$version = (Get-Content VERSION -Raw).Trim()
+& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=$version install\VLCouch.iss
 ```
 
 **Note:** The installer is unsigned in v1. Windows SmartScreen may warn on first run — code signing can be added later.
