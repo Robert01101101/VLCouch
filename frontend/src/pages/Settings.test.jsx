@@ -23,6 +23,7 @@ describe('Settings', () => {
       vlc_found: true,
       vlc_download_url: 'https://www.videolan.org/vlc/',
       ffmpeg_available: true,
+      ffmpeg_path: 'C:\\ffmpeg\\bin\\ffmpeg.exe',
       ffmpeg_download_url: 'https://ffmpeg.org/download.html',
       winget_available: true,
       library_counts: { movies: 2, shows: 1, episodes: 5 },
@@ -88,6 +89,9 @@ describe('Settings', () => {
     expect(screen.getByTestId('settings-dependencies')).toBeInTheDocument()
     expect(screen.getByTestId('settings-dependency-vlc-status')).toHaveTextContent('Installed')
     expect(screen.getByTestId('settings-dependency-ffmpeg-status')).toHaveTextContent('Installed')
+    expect(screen.getByTestId('settings-dependency-ffmpeg-path')).toHaveTextContent(
+      'C:\\ffmpeg\\bin\\ffmpeg.exe'
+    )
     expect(screen.getByTestId('settings-diagnostics-library-counts')).toHaveTextContent(
       '2 movies, 1 shows, 5 episodes'
     )
@@ -294,7 +298,7 @@ describe('Settings', () => {
       update_available: true,
       current_version: '0.1.0',
       latest_version: '0.2.0',
-      download_url: 'https://example.com/VLCouchSetup-0.2.0.exe',
+      download_url: 'https://example.com/VLCouchSetup.exe',
       release_url: 'https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0',
       error: null,
     })
@@ -302,7 +306,7 @@ describe('Settings', () => {
     expect(await screen.findByTestId('settings-update-available')).toHaveTextContent('0.2.0')
     expect(screen.getByTestId('settings-update-download')).toHaveAttribute(
       'href',
-      'https://example.com/VLCouchSetup-0.2.0.exe'
+      'https://example.com/VLCouchSetup.exe'
     )
   })
 

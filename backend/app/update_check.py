@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 RELEASES_API = "https://api.github.com/repos/Robert01101101/VLCouch/releases/latest"
 CACHE_TTL_SECONDS = 6 * 60 * 60
-INSTALLER_ASSET_PATTERN = re.compile(r"^VLCouchSetup-.+\.exe$", re.IGNORECASE)
+INSTALLER_ASSET_NAME = "VLCouchSetup.exe"
+INSTALLER_ASSET_PATTERN = re.compile(r"^VLCouchSetup(?:-.+)?\.exe$", re.IGNORECASE)
 
 _cache: dict[str, Any] | None = None
 _cache_at: float = 0.0
@@ -58,6 +59,10 @@ def _normalize_tag(tag_name: str) -> str:
 
 
 def _pick_installer_asset(assets: list[dict[str, Any]]) -> str | None:
+    for asset in assets:
+        name = asset.get("name") or ""
+        if name.lower() == INSTALLER_ASSET_NAME.lower():
+            return asset.get("browser_download_url")
     for asset in assets:
         name = asset.get("name") or ""
         if INSTALLER_ASSET_PATTERN.match(name):

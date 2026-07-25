@@ -24,7 +24,7 @@ Scans folders on your PC, builds poster rows and a hero banner, and launches [VL
 
 ### Windows (recommended)
 
-1. Download **VLCouchSetup-*.exe** from [GitHub Releases](https://github.com/Robert01101101/VLCouch/releases).
+1. Download **[VLCouchSetup.exe](https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe)** (always the latest release).
 2. Launch **VLCouch** from the Start menu → add movie/TV folders → **Rescan Library**.
 
 You also need [VLC](https://www.videolan.org/) (playback) and [ffmpeg](https://ffmpeg.org/) (thumbnails). On Windows, **Settings** shows their status and offers **Install (winget)** when available, or a download link otherwise.

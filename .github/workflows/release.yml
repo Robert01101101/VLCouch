@@ -52,5 +52,5 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: VLCouch ${{ steps.version.outputs.version }}
-          files: dist/installer/VLCouchSetup-${{ steps.version.outputs.version }}.exe
+          files: dist/installer/VLCouchSetup.exe
           generate_release_notes: true

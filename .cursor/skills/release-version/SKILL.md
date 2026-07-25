@@ -8,7 +8,11 @@ description: >-
 
 # Release a new version
 
-End-user releases are **tag-driven**: push `vX.Y.Z` and [`.github/workflows/release.yml`](.github/workflows/release.yml) builds `VLCouchSetup-{version}.exe` and attaches it to a GitHub Release.
+End-user releases are **tag-driven**: push `vX.Y.Z` and [`.github/workflows/release.yml`](.github/workflows/release.yml) builds `VLCouchSetup.exe` and attaches it to a GitHub Release.
+
+**Stable download URL** (for websites — always serves the latest release):
+
+`https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe`
 
 ## When to use
 
@@ -29,6 +33,7 @@ End-user releases are **tag-driven**: push `vX.Y.Z` and [`.github/workflows/rele
 |------|------|
 | [`VERSION`](VERSION) | Single source — must match the git tag (without `v` prefix) |
 | [`backend/app/version.py`](backend/app/version.py) | Runtime loader (reads `version.txt` when packaged, else `VERSION`) |
+| [`e2e/specs/settings.spec.ts`](e2e/specs/settings.spec.ts) | E2E version assertion reads `VERSION` via `e2e/helpers/appVersion.ts` |
 | Tag format | `v0.2.0` → `VERSION` contains `0.2.0` |
 
 CI **fails** if the tag and `VERSION` disagree.
@@ -46,7 +51,7 @@ Release v____:
 - [ ] 5. Push to main
 - [ ] 6. Create and push tag vX.Y.Z
 - [ ] 7. Confirm GitHub Actions release job succeeded
-- [ ] 8. Confirm GitHub Release has VLCouchSetup-X.Y.Z.exe
+- [ ] 8. Confirm GitHub Release has `VLCouchSetup.exe`
 ```
 
 ## Step-by-step
@@ -65,7 +70,9 @@ Fix failures before releasing. At minimum run layers touched since the last rele
 
 Edit [`VERSION`](VERSION) — one line, semver `MAJOR.MINOR.PATCH` (e.g. `0.2.0`).
 
-No other files need manual version edits; packaging copies `VERSION` into `backend/app/version.txt`.
+No other files need manual version edits for a normal release; packaging copies `VERSION` into `backend/app/version.txt`. The E2E settings spec reads `VERSION` at runtime via [`e2e/helpers/appVersion.ts`](e2e/helpers/appVersion.ts).
+
+If you add new tests that assert a specific version string, read from `VERSION` (same helper) or grep the repo for the old semver — do **not** hardcode version literals that will drift on the next bump.
 
 ### 3. Local package smoke test (recommended)
 
@@ -82,7 +89,7 @@ To build the installer locally (Inno Setup 6 required):
 ```powershell
 $version = (Get-Content VERSION -Raw).Trim()
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=$version install\VLCouch.iss
-# Output: dist/installer/VLCouchSetup-{version}.exe
+# Output: dist/installer/VLCouchSetup.exe
 ```
 
 `dist/` is gitignored — do not commit it.
@@ -142,7 +149,7 @@ Or open the Actions tab on GitHub. The **Release** workflow runs on `windows-lat
 2. Runs `.\scripts\package.ps1`
 3. Installs Inno Setup via Chocolatey
 4. Compiles `install/VLCouch.iss`
-5. Creates a GitHub Release with `VLCouchSetup-{version}.exe`
+5. Creates a GitHub Release with `VLCouchSetup.exe`
 
 ### 8. Post-release verification
 
@@ -154,14 +161,15 @@ gh release view "v$version"
 Confirm:
 
 - Release exists with auto-generated notes
-- Asset `VLCouchSetup-{version}.exe` is attached
+- Asset `VLCouchSetup.exe` is attached
+- Stable URL resolves: `.../releases/latest/download/VLCouchSetup.exe`
 - Installed users will see **Settings → About → Update available** when their version is older (background check against GitHub Releases API)
 
 ## What gets published
 
 | Artifact | Path on user machine after install |
 |----------|-----------------------------------|
-| `VLCouchSetup-X.Y.Z.exe` | Installs to `%LOCALAPPDATA%\VLCouch\app\` |
+| `VLCouchSetup.exe` | Installs to `%LOCALAPPDATA%\VLCouch\app\` (version in tag + in-app About) |
 | User data (preserved) | `%LOCALAPPDATA%\VLCouch\data\` |
 
 Dev/git installs (`.\scripts\dev.ps1`, `Setup.bat`) are unaffected.
@@ -174,7 +182,7 @@ Dev/git installs (`.\scripts\dev.ps1`, `Setup.bat`) are unaffected.
 | `package.ps1` smoke test timeout | Check port 8010 not in use; re-run package script |
 | Inno compile fails in CI | Inspect workflow log; verify `dist/staging/` layout locally |
 | SmartScreen warning for users | Expected — installer is unsigned in v1 (see CONTRIBUTING) |
-| Update check not showing | Requires a published GitHub Release with `VLCouchSetup-*.exe` asset; skipped in test/dev mode |
+| Update check not showing | Requires a published GitHub Release with `VLCouchSetup.exe` asset; skipped in test/dev mode |
 
 ## Do not
 
