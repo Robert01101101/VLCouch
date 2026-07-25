@@ -31,10 +31,11 @@ Tests use fixture media under `backend/tests/fixtures/media/` with `APP_ENV=test
 
 See the **release-version** skill (`.cursor/skills/release-version/`) for the full agent workflow. Summary:
 
-1. Bump the version in [`VERSION`](VERSION) at the repo root.
-2. Commit and push to `main`.
-3. Create and push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`
-4. GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) builds `dist/staging/`, compiles `VLCouchSetup.exe` with Inno Setup, and attaches it to a GitHub Release.
+1. Bump [`VERSION`](VERSION) at the repo root.
+2. Ensure `e2e/specs/settings.spec.ts` uses `e2e/helpers/appVersion.ts` (no hardcoded semver).
+3. Run `.\scripts\test.ps1 -Layer all` — commit the bump **only if all tests pass**.
+4. Push to `main`, then create and push a matching tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+5. GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) builds `dist/staging/`, compiles `VLCouchSetup.exe`, and attaches it to a GitHub Release.
 
 Stable download URL for websites: `https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe`
 

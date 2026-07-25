@@ -156,7 +156,7 @@ Skills in `.cursor/skills/` guide verification and common workflows:
 | `add-api-endpoint` | New backend route end-to-end (router, tests, UI) |
 | `maintain-agent-docs` | Sync AGENTS.md, selectors, verify skills, CONTRIBUTING.md |
 | `generate-commit-message` | Draft commit message from the diff before committing |
-| `release-version` | Cut a Windows release — bump VERSION, tag `vX.Y.Z`, publish installer via CI |
+| `release-version` | **Always** for version/release/bump/tag prompts — bump `VERSION`, sync E2E spec, run full suite, commit only if green, then tag/publish |
 
 ## Related docs
 
