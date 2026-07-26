@@ -33,6 +33,18 @@ def _job_key(job_type: JobType, item_id: int) -> str:
     return f"{job_type}:{item_id}"
 
 
+def worker_status() -> dict:
+    """Return thumbnail worker queue state for status polling."""
+    with _in_flight_lock:
+        in_flight = len(_in_flight)
+    queue_size = _queue.qsize()
+    return {
+        "busy": in_flight > 0 or queue_size > 0,
+        "queue_size": queue_size,
+        "in_flight": in_flight,
+    }
+
+
 def enqueue(job_type: JobType, item_id: int = 0) -> bool:
     """Queue a thumbnail job. Returns False if already queued or running."""
     if TEST_MODE:

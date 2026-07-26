@@ -15,6 +15,7 @@ from app.playback_poller import start_poller, stop_poller
 from app.playback_service import sweep_stale_sessions
 from app.routers import library, play, settings, watch
 from app.thumbnail_service import queue_all_thumbnails_backfill
+from app.thumbnail_worker import worker_status
 from app.thumbnails import ensure_thumbnail_cache_current_on_startup
 from app.update_check import schedule_startup_check
 
@@ -96,6 +97,10 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
             "running": _scan_state["running"],
             "last_stats": _scan_state["last_stats"],
         }
+
+    @application.get("/api/thumbnails/status")
+    def thumbnail_status():
+        return worker_status()
 
     @application.get("/api/health")
     def health():
