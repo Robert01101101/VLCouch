@@ -51,10 +51,10 @@ End-user installs use an Inno Setup `.exe` built in CI on version tags:
 | `%LOCALAPPDATA%\VLCouch\data\` | Library DB, posters, playlists (preserved) |
 
 - Version source: [`VERSION`](VERSION) at repo root; runtime reads [`backend/app/version.py`](backend/app/version.py)
-- Packaging: [`scripts/package.ps1`](scripts/package.ps1) — embeddable Python 3.12, pip deps, built frontend
+- Packaging: [`scripts/package.ps1`](scripts/package.ps1) — embeddable Python 3.12, pip deps, built frontend, `backend/scripts/pick_folder_dialog.py` (Win32 folder picker, no tkinter)
 - Installer script: [`install/VLCouch.iss`](install/VLCouch.iss)
 - Release workflow: [`.github/workflows/release.yml`](.github/workflows/release.yml) — push tag `vX.Y.Z` (must match `VERSION`)
-- Update notifications: [`backend/app/update_check.py`](backend/app/update_check.py) + `GET /api/update` + Settings About banner
+- Update notifications: [`backend/app/update_check.py`](backend/app/update_check.py) + `GET /api/update` + Settings nav badge + About section
 - Installed launcher sets `VLCOUCH_DATA_DIR` via [`scripts/start.ps1`](scripts/start.ps1)
 
 Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
@@ -66,12 +66,13 @@ Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 | Home browse rows, hero, search | `backend/app/routers/library.py` |
 | Filename / folder parsing | `backend/app/scanner.py` |
 | Scan orchestration | `backend/app/library_scan.py` |
-| Thumbnail extraction | `backend/app/thumbnail_service.py`, `backend/app/thumbnail_jobs.py` |
+| Thumbnail extraction | `backend/app/thumbnail_service.py`, `backend/app/thumbnail_jobs.py`, `backend/app/thumbnail_worker.py` |
 | VLC launch + playback tracking | `backend/app/routers/play.py`, `backend/app/vlc.py`, `backend/app/playback_service.py`, `backend/app/playback_poller.py`, `backend/app/vlc_http.py`, `backend/app/vlc_playlist.py` |
 | Watch status + resume position | `backend/app/routers/watch.py`, `backend/app/watch_service.py`, `backend/app/library_progress.py` |
 | Settings persistence | `backend/app/routers/settings.py`, `backend/app/settings_store.py` |
 | Update check | `backend/app/update_check.py` |
-| Windows packaging / installer | `scripts/package.ps1`, `install/VLCouch.iss` |
+| Windows packaging / installer | `scripts/package.ps1`, `install/VLCouch.iss`, `backend/scripts/pick_folder_dialog.py` |
+| Media folder picker | `backend/app/folder_picker.py`, `backend/scripts/pick_folder_dialog.py` |
 | Wikipedia metadata | `backend/app/metadata.py` |
 | DB models | `backend/app/models.py`, `backend/app/db.py` |
 | App startup, scan trigger | `backend/app/main.py` |
@@ -82,6 +83,7 @@ Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 | Settings page | `frontend/src/pages/Settings.jsx` |
 | Poster cards | `frontend/src/components/PosterCard.jsx` |
 | Routing / nav | `frontend/src/App.jsx` |
+| Global scan/thumbnail status bar | `frontend/src/components/GlobalStatusBar.jsx`, `GET /api/thumbnails/status` in `main.py` |
 
 ## Commit messages
 

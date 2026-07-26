@@ -14,6 +14,10 @@ Add `data-testid` to new interactive elements:
 | Page loading/error/empty | `page-loading`, `page-error`, `page-empty` |
 | Nav home | `nav-home` |
 | Nav settings | `nav-settings` |
+| Nav settings update badge | `nav-settings-update-badge` |
+| Global status bar | `global-status-bar` |
+| Global status scanning | `global-status-scanning` |
+| Global status thumbnails | `global-status-thumbnails` |
 | Hero banner | `hero-banner` |
 | Hero play button | `hero-play` |
 | Library search input | `library-search` |
@@ -22,7 +26,7 @@ Add `data-testid` to new interactive elements:
 | Settings page | `settings-page` |
 | Wikipedia toggle | `settings-wikipedia-toggle` |
 | Auto thumbnails toggle | `settings-auto-thumbnails-toggle` |
-| Simple VLC toggle | `settings-simple-vlc-toggle` |
+| VLC CLI options toggle | `settings-vlc-cli-options-toggle` |
 | VLC playback options group | `settings-vlc-options` |
 | VLC subtitles toggle | `settings-vlc-subtitles-toggle` |
 | VLC resume toggle | `settings-vlc-resume-toggle` |
@@ -36,10 +40,8 @@ Add `data-testid` to new interactive elements:
 | Settings rescan disabled hint | `settings-rescan-disabled-hint` |
 | Settings last scan stats | `settings-last-scan-stats` |
 | Settings thumbnail notice | `settings-thumbnail-notice` |
-| Settings VLC simple mode note | `settings-vlc-simple-note` |
 | Settings VLC playlist options | `settings-vlc-playlist-options` |
 | Settings VLC playlist advance hint | `settings-vlc-playlist-advance-hint` |
-| Settings diagnostics | `settings-diagnostics` |
 | Settings diagnostics library counts | `settings-diagnostics-library-counts` |
 | Settings dependencies section | `settings-dependencies` |
 | Settings dependency VLC row | `settings-dependency-vlc` |

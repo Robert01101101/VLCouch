@@ -28,7 +28,10 @@ After any change under `backend/app/` — routers, models, scanner, config, VLC/
 
 | File | Covers |
 |------|--------|
-| `test_health.py` | `GET /api/health` |
+| `test_health.py` | `GET /api/health`, `GET /api/thumbnails/status` |
+| `test_thumbnail_worker.py` | thumbnail queue `worker_status()` |
+| `test_folder_picker.py` | Windows folder picker subprocess |
+| `test_media_roots_api.py` | media roots CRUD, pick-folder responses |
 | `test_library_api.py` | browse, movies, shows, show detail, search |
 | `test_watch_api.py` | watch-status, season watch-status, continue-watching |
 | `test_play_api.py` | play endpoint, TEST_MODE VLC skip |
