@@ -3,8 +3,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.folder_picker import (
-    PickFolderResult,
     _PICKER_SCRIPT,
+    PickFolderResult,
     open_folder,
     pick_folder,
     picker_available,

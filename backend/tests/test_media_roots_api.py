@@ -1,10 +1,11 @@
-from sqlmodel import Session
-
 from unittest.mock import patch
+
+from sqlmodel import Session
 
 import app.db as db
 import app.settings_store as settings_store
 from app.folder_picker import PickFolderResult
+
 
 def test_get_media_roots_seeded_from_env(empty_client):
     response = empty_client.get("/api/media-roots")
