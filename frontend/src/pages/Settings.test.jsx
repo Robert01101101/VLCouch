@@ -74,7 +74,7 @@ describe('Settings', () => {
     expect(screen.getByTestId('settings-scan-on-startup-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-browse-row-random-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-auto-thumbnails-toggle')).toBeInTheDocument()
-    expect(screen.getByTestId('settings-simple-vlc-toggle')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-cli-options-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-vlc-options')).toBeInTheDocument()
     expect(screen.getByTestId('settings-vlc-subtitles-toggle')).toBeInTheDocument()
     expect(screen.getByTestId('settings-vlc-resume-toggle')).toBeInTheDocument()
@@ -85,7 +85,6 @@ describe('Settings', () => {
       'href',
       'https://github.com/Robert01101101/VLCouch'
     )
-    expect(screen.getByTestId('settings-diagnostics')).toBeInTheDocument()
     expect(screen.getByTestId('settings-dependencies')).toBeInTheDocument()
     expect(screen.getByTestId('settings-dependency-vlc-status')).toHaveTextContent('Installed')
     expect(screen.getByTestId('settings-dependency-ffmpeg-status')).toHaveTextContent('Installed')
@@ -184,14 +183,18 @@ describe('Settings', () => {
     expect(await screen.findByTestId('settings-action-error')).toHaveTextContent('Save failed')
   })
 
-  it('hides vlc options when simple vlc is enabled', async () => {
+  it('disables vlc options when command-line options are off', async () => {
     api.fetchSettings.mockResolvedValue({
       ...defaultSettings,
       simple_vlc_playback: true,
     })
     render(<Settings scanning={false} onScan={vi.fn()} />)
-    await screen.findByTestId('settings-vlc-simple-note')
-    expect(screen.queryByTestId('settings-vlc-options')).not.toBeInTheDocument()
+    const options = await screen.findByTestId('settings-vlc-options')
+    expect(options).toBeInTheDocument()
+    expect(screen.getByTestId('settings-vlc-subtitles-toggle')).toBeDisabled()
+    expect(screen.getByTestId('settings-vlc-resume-toggle')).toBeDisabled()
+    expect(screen.getByTestId('settings-vlc-tv-playlist-toggle')).toBeDisabled()
+    expect(screen.getByTestId('settings-vlc-playlist-advance-toggle')).toBeDisabled()
   })
 
   it('hides auto-advance when tv playlists are disabled', async () => {
@@ -213,9 +216,9 @@ describe('Settings', () => {
     })
   })
 
-  it('updates simple vlc toggle', async () => {
+  it('updates vlc command-line options toggle', async () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
-    const toggle = await screen.findByTestId('settings-simple-vlc-toggle')
+    const toggle = await screen.findByTestId('settings-vlc-cli-options-toggle')
     fireEvent.click(toggle)
     await waitFor(() => {
       expect(api.updateSettings).toHaveBeenCalledWith({ simple_vlc_playback: true })

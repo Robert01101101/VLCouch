@@ -125,10 +125,17 @@ def pick_media_folder():
             status_code=503,
             detail="Folder picker is not available in test mode",
         )
-    path = pick_folder()
-    if not path:
-        return {"cancelled": True, "path": None}
-    return {"cancelled": False, "path": path}
+    result = pick_folder()
+    if not result.available:
+        return {
+            "available": False,
+            "cancelled": False,
+            "path": None,
+            "error": result.error or "Folder picker is not available",
+        }
+    if result.cancelled or not result.path:
+        return {"available": True, "cancelled": True, "path": None}
+    return {"available": True, "cancelled": False, "path": result.path}
 
 
 @router.post("/dependencies/{name}/install")

@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 from sqlmodel import Session
 
 import app.db as db
 import app.settings_store as settings_store
+from app.folder_picker import PickFolderResult
 
 
 def test_get_media_roots_seeded_from_env(empty_client):
@@ -62,6 +65,55 @@ def test_put_media_roots_deduplicates_and_validates(empty_client):
 def test_pick_folder_unavailable_in_test_mode(empty_client):
     response = empty_client.post("/api/media-roots/pick-folder")
     assert response.status_code == 503
+
+
+@patch("app.routers.settings.TEST_MODE", False)
+@patch("app.routers.settings.pick_folder")
+def test_pick_folder_cancelled_response(mock_pick_folder, empty_client):
+    mock_pick_folder.return_value = PickFolderResult(cancelled=True)
+
+    response = empty_client.post("/api/media-roots/pick-folder")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": True,
+        "cancelled": True,
+        "path": None,
+    }
+
+
+@patch("app.routers.settings.TEST_MODE", False)
+@patch("app.routers.settings.pick_folder")
+def test_pick_folder_unavailable_response(mock_pick_folder, empty_client):
+    mock_pick_folder.return_value = PickFolderResult(
+        available=False,
+        error="Folder picker is not installed",
+    )
+
+    response = empty_client.post("/api/media-roots/pick-folder")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "cancelled": False,
+        "path": None,
+        "error": "Folder picker is not installed",
+    }
+
+
+@patch("app.routers.settings.TEST_MODE", False)
+@patch("app.routers.settings.pick_folder")
+def test_pick_folder_selected_path_response(mock_pick_folder, empty_client):
+    mock_pick_folder.return_value = PickFolderResult(path="D:\\Movies")
+
+    response = empty_client.post("/api/media-roots/pick-folder")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": True,
+        "cancelled": False,
+        "path": "D:\\Movies",
+    }
 
 
 def test_media_roots_used_by_scan(empty_client, tmp_path):

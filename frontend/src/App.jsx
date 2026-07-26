@@ -1,16 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation, Link } from 'react-router-dom'
 import Home from './pages/Home'
 import ShowDetail from './pages/ShowDetail'
 import Settings from './pages/Settings'
 import SearchBar from './components/SearchBar'
-import { triggerScan, waitForScanComplete } from './api'
+import GlobalStatusBar from './components/GlobalStatusBar'
+import { fetchUpdateStatus, triggerScan, waitForScanComplete } from './api'
 
 export default function App() {
   const location = useLocation()
   const isHome = location.pathname === '/'
   const [scanning, setScanning] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [updateStatus, setUpdateStatus] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchUpdateStatus()
+      .then((data) => {
+        if (!cancelled) {
+          setUpdateStatus(data)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function handleScan() {
     setScanning(true)
@@ -62,14 +78,22 @@ export default function App() {
             <Link
               to="/settings"
               data-testid="nav-settings"
-              className="text-sm text-gray-300 hover:text-white transition-colors shrink-0"
+              className="relative text-sm text-gray-300 hover:text-white transition-colors shrink-0"
             >
               Settings
+              {updateStatus?.update_available && (
+                <span
+                  className="absolute -right-2 -top-1 h-2 w-2 rounded-full bg-couch-red"
+                  data-testid="nav-settings-update-badge"
+                  aria-label="Update available"
+                />
+              )}
             </Link>
             <SearchBar />
           </div>
         </div>
       </header>
+      <GlobalStatusBar />
       <main>
         <Routes>
           <Route path="/" element={<Home refreshKey={refreshKey} scanning={scanning} onScan={handleScan} />} />
@@ -89,6 +113,8 @@ export default function App() {
                   scanning={scanning}
                   onScan={handleScan}
                   onBrowseRefresh={() => setRefreshKey((key) => key + 1)}
+                  updateStatus={updateStatus}
+                  onUpdateStatusChange={setUpdateStatus}
                 />
               </div>
             }

@@ -1,7 +1,7 @@
 """Standalone folder picker subprocess (Windows).
 
 Opened separately from the API server so the dialog can be forced to the
-foreground above the browser.
+foreground above the browser. Uses SHBrowseForFolderW (no tkinter).
 """
 
 from __future__ import annotations
@@ -9,12 +9,15 @@ from __future__ import annotations
 import ctypes
 import sys
 import threading
-import tkinter as tk
 from ctypes import wintypes
-from tkinter import filedialog
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
+shell32 = ctypes.windll.shell32
+ole32 = ctypes.windll.ole32
+
+BIF_RETURNONLYFSDIRS = 0x0001
+BIF_NEWDIALOGSTYLE = 0x0040
 
 DIALOG_TITLE_FRAGMENTS = (
     "browse for folder",
@@ -22,6 +25,19 @@ DIALOG_TITLE_FRAGMENTS = (
     "select a folder",
     "choose folder",
 )
+
+
+class BROWSEINFOW(ctypes.Structure):
+    _fields_ = [
+        ("hwndOwner", wintypes.HWND),
+        ("pidlRoot", ctypes.c_void_p),
+        ("pszDisplayName", wintypes.LPWSTR),
+        ("lpszTitle", wintypes.LPCWSTR),
+        ("ulFlags", wintypes.UINT),
+        ("lpfn", ctypes.c_void_p),
+        ("lParam", ctypes.c_longlong),
+        ("iImage", ctypes.c_int),
+    ]
 
 
 def _window_text(hwnd: int) -> str:
@@ -65,10 +81,10 @@ def _force_foreground(hwnd: int) -> None:
 
     try:
         user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-        user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0003 | 0x0040)  # TOPMOST | NOMOVE | NOSIZE | SHOWWINDOW
+        user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0003 | 0x0040)
         user32.SetForegroundWindow(hwnd)
         user32.BringWindowToTop(hwnd)
-        user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, 0x0003 | 0x0040)  # NOTOPMOST
+        user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, 0x0003 | 0x0040)
     finally:
         if attached:
             user32.AttachThreadInput(foreground_thread, current_thread, False)
@@ -91,21 +107,37 @@ def _bring_picker_to_front(stop: threading.Event) -> None:
         stop.wait(0.05)
 
 
+def _pick_folder_path() -> str | None:
+    display_name = ctypes.create_unicode_buffer(260)
+    bi = BROWSEINFOW()
+    bi.lpszTitle = "Select a folder"
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
+    bi.pszDisplayName = display_name
+
+    pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
+    if not pidl:
+        return None
+
+    path_buf = ctypes.create_unicode_buffer(260)
+    try:
+        if not shell32.SHGetPathFromIDListW(pidl, path_buf):
+            return None
+        return path_buf.value
+    finally:
+        ole32.CoTaskMemFree(pidl)
+
+
 def main() -> int:
+    ole32.CoInitializeEx(None, 0)
     stop = threading.Event()
     worker = threading.Thread(target=_bring_picker_to_front, args=(stop,), daemon=True)
     worker.start()
 
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    root.update_idletasks()
-
     try:
-        path = filedialog.askdirectory(mustexist=True, parent=root)
+        path = _pick_folder_path()
     finally:
         stop.set()
-        root.destroy()
+        ole32.CoUninitialize()
 
     if path:
         print(path, end="")

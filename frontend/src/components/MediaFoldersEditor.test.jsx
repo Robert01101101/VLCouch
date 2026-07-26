@@ -9,7 +9,11 @@ describe('MediaFoldersEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     api.updateMediaRoots.mockImplementation(async (roots) => ({ roots }))
-    api.pickMediaFolder.mockResolvedValue({ cancelled: false, path: 'D:\\Movies' })
+    api.pickMediaFolder.mockResolvedValue({
+      cancelled: false,
+      available: true,
+      path: 'D:\\Movies',
+    })
   })
 
   it('shows choose-folder rows when empty', () => {
@@ -59,5 +63,37 @@ describe('MediaFoldersEditor', () => {
       />
     )
     expect(screen.getByTestId('settings-media-root-0-path')).toHaveTextContent('D:\\Movies')
+  })
+
+  it('shows an error when the folder picker is unavailable', async () => {
+    api.pickMediaFolder.mockResolvedValue({
+      available: false,
+      cancelled: false,
+      path: null,
+      error: 'Folder picker is not installed',
+    })
+
+    render(<MediaFoldersEditor roots={[]} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('settings-media-row-movies-choose'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-media-folders-error')).toHaveTextContent(
+        'Folder picker is not installed'
+      )
+    })
+  })
+
+  it('expands manual path entry in setup mode', () => {
+    render(
+      <MediaFoldersEditor
+        roots={[]}
+        onChange={vi.fn()}
+        browseTestIdPrefix="setup"
+        listTestId="setup-media-folders"
+        prominentManualPath
+      />
+    )
+
+    expect(screen.getByTestId('setup-media-path-input')).toBeVisible()
   })
 })

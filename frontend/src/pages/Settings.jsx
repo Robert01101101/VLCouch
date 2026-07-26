@@ -133,7 +133,13 @@ function DependencyStatus({
   )
 }
 
-export default function Settings({ scanning, onScan, onBrowseRefresh }) {
+export default function Settings({
+  scanning,
+  onScan,
+  onBrowseRefresh,
+  updateStatus: updateStatusProp,
+  onUpdateStatusChange,
+}) {
   const [settings, setSettings] = useState(null)
   const [mediaRoots, setMediaRoots] = useState([])
   const [scanStatus, setScanStatus] = useState(null)
@@ -144,8 +150,10 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
   const [thumbnailNotice, setThumbnailNotice] = useState(null)
   const [installingDep, setInstallingDep] = useState(null)
   const [installNotice, setInstallNotice] = useState(null)
-  const [updateStatus, setUpdateStatus] = useState(null)
+  const [localUpdateStatus, setLocalUpdateStatus] = useState(null)
   const [checkingUpdates, setCheckingUpdates] = useState(false)
+  const updateStatus = updateStatusProp ?? localUpdateStatus
+  const setUpdateStatus = onUpdateStatusChange ?? setLocalUpdateStatus
 
   const isDevMode =
     import.meta.env.MODE === 'development' || import.meta.env.APP_ENV === 'development'
@@ -154,12 +162,16 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
     setLoading(true)
     try {
       setError(null)
-      const [settingsData, mediaRootsData, statusData, updateData] = await Promise.all([
+      const fetches = [
         fetchSettings(),
         fetchMediaRoots(),
         fetchScanStatus().catch(() => null),
-        fetchUpdateStatus().catch(() => null),
-      ])
+      ]
+      if (updateStatusProp === undefined) {
+        fetches.push(fetchUpdateStatus().catch(() => null))
+      }
+      const results = await Promise.all(fetches)
+      const [settingsData, mediaRootsData, statusData, updateData] = results
       setSettings(settingsData)
       setMediaRoots(mediaRootsData.roots || [])
       if (statusData) {
@@ -313,30 +325,36 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
 
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-300 mb-4">Required software</h2>
-        <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5 space-y-6" data-testid="settings-dependencies">
-          <DependencyStatus
-            testId="settings-dependency-vlc"
-            label="VLC media player"
-            description="Opens and plays your movies and TV episodes."
-            installed={diagnostics?.vlc_found}
-            path={diagnostics?.vlc_path}
-            downloadUrl={diagnostics?.vlc_download_url}
-            installing={installingDep === 'vlc'}
-            canInstall={diagnostics?.winget_available}
-            onInstall={() => handleInstallDependency('vlc')}
-          />
-          <DependencyStatus
-            testId="settings-dependency-ffmpeg"
-            label="ffmpeg"
-            description="Extracts poster and episode thumbnails from your video files."
-            installed={diagnostics?.ffmpeg_available}
-            path={diagnostics?.ffmpeg_path}
-            downloadUrl={diagnostics?.ffmpeg_download_url}
-            installing={installingDep === 'ffmpeg'}
-            canInstall={diagnostics?.winget_available}
-            onInstall={() => handleInstallDependency('ffmpeg')}
-          />
-          <div className="flex flex-wrap items-center gap-3 border-t border-gray-700 pt-4">
+        <div className="space-y-5 rounded-lg border border-gray-800 bg-couch-gray/40 p-5" data-testid="settings-dependencies">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-gray-200">Required</h3>
+            <DependencyStatus
+              testId="settings-dependency-vlc"
+              label="VLC media player"
+              description="Opens and plays your movies and TV episodes."
+              installed={diagnostics?.vlc_found}
+              path={diagnostics?.vlc_path}
+              downloadUrl={diagnostics?.vlc_download_url}
+              installing={installingDep === 'vlc'}
+              canInstall={diagnostics?.winget_available}
+              onInstall={() => handleInstallDependency('vlc')}
+            />
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-gray-200">Optional (for thumbnails)</h3>
+            <DependencyStatus
+              testId="settings-dependency-ffmpeg"
+              label="ffmpeg"
+              description="Extracts poster and episode thumbnails from your video files."
+              installed={diagnostics?.ffmpeg_available}
+              path={diagnostics?.ffmpeg_path}
+              downloadUrl={diagnostics?.ffmpeg_download_url}
+              installing={installingDep === 'ffmpeg'}
+              canInstall={diagnostics?.winget_available}
+              onInstall={() => handleInstallDependency('ffmpeg')}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               data-testid="settings-dependencies-refresh"
@@ -395,11 +413,22 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
             )}
           </div>
 
+          {diagnostics && (
+            <p className="text-sm text-gray-400" data-testid="settings-diagnostics-library-counts">
+              Library:{' '}
+              <span className="text-gray-200">
+                {diagnostics.library_counts.movies} movies,{' '}
+                {diagnostics.library_counts.shows} shows,{' '}
+                {diagnostics.library_counts.episodes} episodes
+              </span>
+            </p>
+          )}
+
           <div className="space-y-6">
             <SettingToggle
               testId="settings-scan-on-startup-toggle"
               label="Automatically rescan on startup"
-              description="Applies the next time the server starts."
+              description="Applies the next time the app starts."
               checked={settings.scan_on_startup}
               onChange={(value) => handleToggle('scan_on_startup', value)}
             />
@@ -437,65 +466,68 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
         <h2 className="text-lg font-semibold text-gray-300 mb-4">Playback</h2>
         <div className="space-y-6 rounded-lg border border-gray-800 bg-couch-gray/40 p-5">
           <SettingToggle
-            testId="settings-simple-vlc-toggle"
-            label="Simple VLC launch"
-            description="Open files in VLC with no extra options. Hides the playback options below. Use this if your VLC version has compatibility issues."
-            checked={settings.simple_vlc_playback}
-            onChange={(value) => handleToggle('simple_vlc_playback', value)}
+            testId="settings-vlc-cli-options-toggle"
+            label="VLC command-line options"
+            description="Provides control over VLC beyond launching the media. Try disabling if there are compatibility issues."
+            checked={!settings.simple_vlc_playback}
+            onChange={(value) => handleToggle('simple_vlc_playback', !value)}
           />
 
-          {settings.simple_vlc_playback ? (
-            <p className="text-sm text-gray-400" data-testid="settings-vlc-simple-note">
-              Playback options are not used in simple mode.
-            </p>
-          ) : (
-            <div data-testid="settings-vlc-options" className="ml-1 space-y-6 border-l border-gray-700 pl-5">
+          <div
+            data-testid="settings-vlc-options"
+            className={`ml-1 space-y-6 border-l border-gray-700 pl-5 ${
+              settings.simple_vlc_playback ? 'opacity-60' : ''
+            }`}
+          >
+            <SettingToggle
+              testId="settings-vlc-subtitles-toggle"
+              label="Enable subtitles"
+              description="Turn on subtitles in VLC when playing. Uses detected subtitle files or the first embedded subtitle track."
+              checked={settings.vlc_subtitles_on}
+              disabled={settings.simple_vlc_playback}
+              onChange={(value) => handleToggle('vlc_subtitles_on', value)}
+            />
+
+            <SettingToggle
+              testId="settings-vlc-resume-toggle"
+              label="Remember playback position"
+              description="Save your place while watching and resume from that position the next time you play."
+              checked={settings.vlc_resume_playback}
+              disabled={settings.simple_vlc_playback}
+              onChange={(value) => handleToggle('vlc_resume_playback', value)}
+            />
+
+            <div className="space-y-6">
               <SettingToggle
-                testId="settings-vlc-subtitles-toggle"
-                label="Enable subtitles"
-                description="Turn on subtitles in VLC when playing. Uses detected subtitle files or the first embedded subtitle track."
-                checked={settings.vlc_subtitles_on}
-                onChange={(value) => handleToggle('vlc_subtitles_on', value)}
+                testId="settings-vlc-tv-playlist-toggle"
+                label="TV playlists"
+                description="Queue all remaining unwatched episodes in a show when you play an episode."
+                checked={settings.vlc_tv_playlist}
+                disabled={settings.simple_vlc_playback}
+                onChange={(value) => handleToggle('vlc_tv_playlist', value)}
               />
 
-              <SettingToggle
-                testId="settings-vlc-resume-toggle"
-                label="Remember playback position"
-                description="Save your place while watching and resume from that position the next time you play."
-                checked={settings.vlc_resume_playback}
-                onChange={(value) => handleToggle('vlc_resume_playback', value)}
-              />
-
-              <div className="space-y-6">
-                <SettingToggle
-                  testId="settings-vlc-tv-playlist-toggle"
-                  label="TV binge playlists"
-                  description="Queue all remaining unwatched episodes in a show when you play an episode."
-                  checked={settings.vlc_tv_playlist}
-                  onChange={(value) => handleToggle('vlc_tv_playlist', value)}
-                />
-
-                {settings.vlc_tv_playlist ? (
-                  <div
-                    data-testid="settings-vlc-playlist-options"
-                    className="ml-1 space-y-6 border-l border-gray-700 pl-5"
-                  >
-                    <SettingToggle
-                      testId="settings-vlc-playlist-advance-toggle"
-                      label="Auto-advance to next episode"
-                      description="Prevent VLC from repeating the current episode and continue to the next item in the playlist."
-                      checked={settings.vlc_playlist_advance}
-                      onChange={(value) => handleToggle('vlc_playlist_advance', value)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500" data-testid="settings-vlc-playlist-advance-hint">
-                    Enable TV binge playlists to configure auto-advance.
-                  </p>
-                )}
-              </div>
+              {settings.simple_vlc_playback || settings.vlc_tv_playlist ? (
+                <div
+                  data-testid="settings-vlc-playlist-options"
+                  className="ml-1 space-y-6 border-l border-gray-700 pl-5"
+                >
+                  <SettingToggle
+                    testId="settings-vlc-playlist-advance-toggle"
+                    label="Auto-advance to next episode"
+                    description="Prevent VLC from repeating the current episode and continue to the next item in the playlist."
+                    checked={settings.vlc_playlist_advance}
+                    disabled={settings.simple_vlc_playback || !settings.vlc_tv_playlist}
+                    onChange={(value) => handleToggle('vlc_playlist_advance', value)}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500" data-testid="settings-vlc-playlist-advance-hint">
+                  Enable TV playlists to configure auto-advance.
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
 
@@ -514,7 +546,14 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
 
       <section>
         <h2 className="text-lg font-semibold text-gray-300 mb-4">About</h2>
-        <div className="rounded-lg border border-gray-800 bg-couch-gray/40 p-5 space-y-3">
+        <div className="space-y-4 rounded-lg border border-gray-800 bg-couch-gray/40 p-5">
+          <h3 className="text-sm font-semibold text-gray-200">Version</h3>
+          <p className="text-sm text-gray-300">
+            <span data-testid="settings-version" className="font-medium text-white">
+              {settings.version}{isDevMode ? ' (dev)' : ''}
+            </span>
+          </p>
+
           {updateStatus?.update_available && (
             <div
               data-testid="settings-update-available"
@@ -539,37 +578,7 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
             </div>
           )}
 
-          <p className="text-sm text-gray-300">
-            Version{' '}
-            <span data-testid="settings-version" className="text-white">
-              {settings.version}{isDevMode ? ' (dev)' : ''}
-            </span>
-          </p>
-
-          {diagnostics && (
-            <div className="space-y-2 text-sm text-gray-400" data-testid="settings-diagnostics">
-              <p data-testid="settings-diagnostics-library-counts">
-                Library:{' '}
-                <span className="text-gray-200">
-                  {diagnostics.library_counts.movies} movies,{' '}
-                  {diagnostics.library_counts.shows} shows,{' '}
-                  {diagnostics.library_counts.episodes} episodes
-                </span>
-              </p>
-            </div>
-          )}
-
-          <a
-            href={settings.github_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="settings-github-link"
-            className="inline-block text-sm text-couch-red hover:text-couch-red-light transition-colors"
-          >
-            View on GitHub
-          </a>
-
-          <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               data-testid="settings-check-updates"
@@ -585,6 +594,16 @@ export default function Settings({ scanning, onScan, onBrowseRefresh }) {
               </p>
             )}
           </div>
+
+          <a
+            href={settings.github_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="settings-github-link"
+            className="inline-block text-sm text-couch-red hover:text-couch-red-light transition-colors"
+          >
+            View on GitHub
+          </a>
         </div>
       </section>
     </div>

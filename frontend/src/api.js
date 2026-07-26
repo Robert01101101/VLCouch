@@ -138,6 +138,12 @@ export async function fetchScanStatus() {
   return res.json()
 }
 
+export async function fetchThumbnailStatus() {
+  const res = await fetch(`${API_BASE}/api/thumbnails/status`)
+  if (!res.ok) throw new Error('Failed to fetch thumbnail status')
+  return res.json()
+}
+
 /** Poll until background scan finishes (full library scans can take a while). */
 export async function waitForScanComplete({
   pollMs = 2000,

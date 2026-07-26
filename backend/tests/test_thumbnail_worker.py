@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.thumbnail_worker import _in_flight, enqueue
+from app.thumbnail_worker import _in_flight, enqueue, worker_status
 
 
 @pytest.fixture(autouse=True)
@@ -10,6 +10,20 @@ def reset_thumbnail_worker_state():
     _in_flight.clear()
     yield
     _in_flight.clear()
+
+
+def test_worker_status_idle_by_default():
+    assert worker_status() == {"busy": False, "queue_size": 0, "in_flight": 0}
+
+
+def test_worker_status_reports_in_flight_jobs():
+    _in_flight.add("movie:42")
+    try:
+        status = worker_status()
+        assert status["busy"] is True
+        assert status["in_flight"] == 1
+    finally:
+        _in_flight.discard("movie:42")
 
 
 def test_enqueue_deduplicates_same_job(monkeypatch):

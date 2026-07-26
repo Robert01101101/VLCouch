@@ -34,6 +34,8 @@ After changes to `frontend/src/components/`, `frontend/src/pages/`, or `frontend
 | `Home.test.jsx` | loading, error, browse rows, hero banner |
 | `ShowDetail.test.jsx` | episodes, watched toggle, season bulk watch |
 | `Settings.test.jsx` | settings page, toggles, rescan |
+| `GlobalStatusBar.test.jsx` | global scan/thumbnail status indicators |
+| `MediaFoldersEditor.test.jsx` | media folder picker, manual path entry |
 
 ## Self-correction loop
 
