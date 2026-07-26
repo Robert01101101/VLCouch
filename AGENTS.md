@@ -87,7 +87,7 @@ Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 
 ## Commit messages
 
-Before committing, use the **generate-commit-message** skill (`.cursor/skills/generate-commit-message/`) to draft a human-readable subject, summary, and outcome-focused bullets from the diff.
+Before committing, use the **generate-commit-message** skill (`.cursor/skills/generate-commit-message/`): run ruff + the full test suite, fix any failures, then draft a human-readable subject, summary, and outcome-focused bullets from the diff.
 
 ## Verification checklist
 
