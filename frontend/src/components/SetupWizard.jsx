@@ -19,6 +19,7 @@ export default function SetupWizard({ roots, onRootsChange, scanning, onScan }) 
         onChange={onRootsChange}
         browseTestIdPrefix="setup"
         listTestId="setup-media-folders"
+        prominentManualPath
       />
 
       <div className="mt-6 flex flex-wrap items-center gap-3">

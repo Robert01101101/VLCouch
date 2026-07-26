@@ -90,6 +90,10 @@ $backendDest = Join-Path $staging "backend"
 New-Item -ItemType Directory -Force -Path (Join-Path $backendDest "app") | Out-Null
 Copy-Item -Path (Join-Path $root "backend\app\*") -Destination (Join-Path $backendDest "app") -Recurse -Force
 
+$backendScriptsDest = Join-Path $backendDest "scripts"
+New-Item -ItemType Directory -Force -Path $backendScriptsDest | Out-Null
+Copy-Item -Path (Join-Path $root "backend\scripts\pick_folder_dialog.py") -Destination $backendScriptsDest -Force
+
 $versionTxtDest = Join-Path $backendDest "app\version.txt"
 Set-Content -Path $versionTxtDest -Value $version -NoNewline -Encoding utf8
 
@@ -146,6 +150,30 @@ try {
     if (-not $ready) {
         throw "Packaged server did not respond on port 8010"
     }
+
+    $pickerScript = Join-Path $backendDest "scripts\pick_folder_dialog.py"
+    if (-not (Test-Path $pickerScript)) {
+        throw "Packaged folder picker script missing: $pickerScript"
+    }
+
+    Write-Host "Verifying folder picker module..."
+    $pickerCheck = @"
+import sys
+sys.path.insert(0, r'$backendDest')
+from app.folder_picker import picker_available, _PICKER_SCRIPT
+assert _PICKER_SCRIPT.exists(), f'missing picker script: {_PICKER_SCRIPT}'
+assert picker_available(), 'picker should be available in packaged build'
+import importlib.util
+spec = importlib.util.spec_from_file_location('pick_folder_dialog', r'$pickerScript')
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+assert hasattr(module, 'main'), 'pick_folder_dialog must expose main()'
+"@
+    & $pythonExe -c $pickerCheck
+    if ($LASTEXITCODE -ne 0) {
+        throw "Folder picker verification failed"
+    }
+
     Write-Host "Smoke test passed." -ForegroundColor Green
 } finally {
     if ($smokeProc -and -not $smokeProc.HasExited) {

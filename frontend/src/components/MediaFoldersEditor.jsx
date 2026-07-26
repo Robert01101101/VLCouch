@@ -39,6 +39,7 @@ export default function MediaFoldersEditor({
   onChange,
   browseTestIdPrefix = 'settings',
   listTestId = 'settings-media-folders',
+  prominentManualPath = false,
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -64,6 +65,13 @@ export default function MediaFoldersEditor({
     setError(null)
     try {
       const result = await pickMediaFolder()
+      if (!result.available) {
+        setError(
+          result.error ||
+            'Folder picker is not available. Paste a folder path below instead.'
+        )
+        return
+      }
       if (result.cancelled || !result.path) {
         return
       }
@@ -164,9 +172,11 @@ export default function MediaFoldersEditor({
         })}
       </ul>
 
-      <details className="mt-3">
+      <details className="mt-3" open={prominentManualPath || undefined}>
         <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-300">
-          Paste folder path instead
+          {prominentManualPath
+            ? 'Or paste a folder path'
+            : 'Paste folder path instead'}
         </summary>
         <form onSubmit={handleManualAdd} className="mt-2 flex flex-wrap gap-2">
           <select
