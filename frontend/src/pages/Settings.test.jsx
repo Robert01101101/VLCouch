@@ -101,8 +101,8 @@ describe('Settings', () => {
     )
     expect(screen.getByTestId('rescan-library')).toHaveTextContent('Scan for changes')
     expect(screen.getByTestId('settings-full-rescan')).toHaveTextContent('Full rescan')
-    expect(screen.getByTestId('settings-danger-zone')).toBeInTheDocument()
-    expect(screen.getByTestId('settings-reset-data')).toBeDisabled()
+    expect(screen.getByTestId('settings-reset-app-data')).toHaveTextContent('Reset app data')
+    expect(screen.queryByTestId('settings-danger-zone')).not.toBeInTheDocument()
   })
 
   it('appends dev to version in development mode', async () => {
@@ -372,9 +372,17 @@ describe('Settings', () => {
     )
   })
 
+  it('opens reset danger zone when reset app data is clicked', async () => {
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    fireEvent.click(await screen.findByTestId('settings-reset-app-data'))
+    expect(screen.getByTestId('settings-danger-zone')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-reset-data')).toBeDisabled()
+  })
+
   it('keeps reset button disabled until RESET is typed', async () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
-    const resetButton = await screen.findByTestId('settings-reset-data')
+    fireEvent.click(await screen.findByTestId('settings-reset-app-data'))
+    const resetButton = screen.getByTestId('settings-reset-data')
     expect(resetButton).toBeDisabled()
 
     fireEvent.change(screen.getByTestId('settings-reset-confirm'), {
@@ -395,7 +403,8 @@ describe('Settings', () => {
       scan_started: true,
     })
     render(<Settings scanning={false} onScan={vi.fn()} />)
-    fireEvent.change(await screen.findByTestId('settings-reset-confirm'), {
+    fireEvent.click(await screen.findByTestId('settings-reset-app-data'))
+    fireEvent.change(screen.getByTestId('settings-reset-confirm'), {
       target: { value: 'RESET' },
     })
     fireEvent.click(screen.getByTestId('settings-reset-data'))
@@ -410,7 +419,8 @@ describe('Settings', () => {
   it('shows action error when reset fails', async () => {
     api.resetData.mockRejectedValue(new Error('Reset failed'))
     render(<Settings scanning={false} onScan={vi.fn()} />)
-    fireEvent.change(await screen.findByTestId('settings-reset-confirm'), {
+    fireEvent.click(await screen.findByTestId('settings-reset-app-data'))
+    fireEvent.change(screen.getByTestId('settings-reset-confirm'), {
       target: { value: 'RESET' },
     })
     fireEvent.click(screen.getByTestId('settings-reset-data'))

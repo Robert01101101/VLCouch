@@ -166,6 +166,7 @@ export default function Settings({
   const [installNotice, setInstallNotice] = useState(null)
   const [localUpdateStatus, setLocalUpdateStatus] = useState(null)
   const [checkingUpdates, setCheckingUpdates] = useState(false)
+  const [resetPanelOpen, setResetPanelOpen] = useState(false)
   const [resetConfirmText, setResetConfirmText] = useState('')
   const [resetting, setResetting] = useState(false)
   const [resetNotice, setResetNotice] = useState(null)
@@ -239,6 +240,7 @@ export default function Settings({
     try {
       const result = await resetData()
       setResetConfirmText('')
+      setResetPanelOpen(false)
       setResetNotice(
         result.scan_started
           ? 'All library data was reset. A full rescan has started in the background.'
@@ -444,11 +446,70 @@ export default function Settings({
               >
                 {scanning ? 'Scanning...' : 'Full rescan'}
               </button>
+              <button
+                type="button"
+                data-testid="settings-reset-app-data"
+                onClick={() => {
+                  setResetPanelOpen((open) => !open)
+                  setResetNotice(null)
+                  setResetConfirmText('')
+                }}
+                disabled={scanning || resetting}
+                className="rounded border border-red-800 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-950/40 disabled:opacity-50"
+              >
+                Reset app data
+              </button>
             </div>
-            <p className="mt-2 text-sm text-gray-400">
-              "Scan for changes" quickly skips files that haven't changed. "Full rescan"
-              re-reads every file from scratch.
-            </p>
+            {resetPanelOpen && (
+              <div
+                data-testid="settings-danger-zone"
+                className="mt-4 space-y-4 rounded-lg border border-red-900/60 bg-red-950/20 p-4"
+              >
+                <div>
+                  <h4 className="text-sm font-semibold text-red-300">Danger zone</h4>
+                  <p className="mt-1 text-sm text-gray-400">
+                    Permanently deletes your library database, posters, and playlists. Media
+                    folders are kept and rescanned afterward. Your media files on disk are never
+                    touched.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label
+                      htmlFor="settings-reset-confirm"
+                      className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500"
+                    >
+                      Type RESET to confirm
+                    </label>
+                    <input
+                      id="settings-reset-confirm"
+                      type="text"
+                      data-testid="settings-reset-confirm"
+                      value={resetConfirmText}
+                      onChange={(e) => setResetConfirmText(e.target.value)}
+                      disabled={resetting}
+                      placeholder="RESET"
+                      className="w-40 rounded border border-red-800 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 disabled:opacity-50"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="settings-reset-data"
+                    onClick={handleResetData}
+                    disabled={resetting || resetConfirmText !== 'RESET'}
+                    className="rounded bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {resetting ? 'Resetting...' : 'Reset all data'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {resetNotice && (
+              <p className="mt-3 text-sm text-gray-300" data-testid="settings-reset-notice">
+                {resetNotice}
+              </p>
+            )}
             {!canRescan && (
               <p className="mt-2 text-sm text-gray-500" data-testid="settings-rescan-disabled-hint">
                 Add at least one media folder before scanning.
@@ -660,58 +721,6 @@ export default function Settings({
         </div>
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold text-red-400 mb-4">Danger zone</h2>
-        <div
-          data-testid="settings-danger-zone"
-          className="space-y-4 rounded-lg border border-red-900/60 bg-red-950/20 p-5"
-        >
-          <div>
-            <h3 className="text-sm font-semibold text-gray-200">Reset all data</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Permanently deletes your library database, posters, and playlists. Media
-              folders are kept and rescanned afterward. Your media files on disk are never
-              touched.
-            </p>
-          </div>
-
-          {resetNotice && (
-            <p className="text-sm text-gray-300" data-testid="settings-reset-notice">
-              {resetNotice}
-            </p>
-          )}
-
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label
-                htmlFor="settings-reset-confirm"
-                className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500"
-              >
-                Type RESET to confirm
-              </label>
-              <input
-                id="settings-reset-confirm"
-                type="text"
-                data-testid="settings-reset-confirm"
-                value={resetConfirmText}
-                onChange={(e) => setResetConfirmText(e.target.value)}
-                disabled={resetting}
-                placeholder="RESET"
-                className="w-40 rounded border border-red-800 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-600 disabled:opacity-50"
-              />
-            </div>
-            <button
-              type="button"
-              data-testid="settings-reset-data"
-              onClick={handleResetData}
-              disabled={resetting || resetConfirmText !== 'RESET'}
-              className="rounded bg-red-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {resetting ? 'Resetting...' : 'Reset all data'}
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

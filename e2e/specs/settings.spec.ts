@@ -11,6 +11,8 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('settings-media-folders')).toBeVisible()
     await expect(page.getByTestId('rescan-library')).toBeVisible()
     await expect(page.getByTestId('settings-full-rescan')).toBeVisible()
+    await expect(page.getByTestId('settings-reset-app-data')).toBeVisible()
+    await page.getByTestId('settings-reset-app-data').click()
     await expect(page.getByTestId('settings-danger-zone')).toBeVisible()
     await expect(page.getByTestId('settings-reset-data')).toBeDisabled()
     await expect(page.getByTestId('settings-wikipedia-toggle')).toBeVisible()

@@ -1,3 +1,4 @@
+import importlib.util
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,6 +10,19 @@ from app.folder_picker import (
     pick_folder,
     picker_available,
 )
+
+
+def _load_picker_module():
+    """Import pick_folder_dialog.py as a module without running it as __main__.
+
+    Importing (rather than just reading source) exercises the real Win32
+    ctypes struct definitions and field assignments, which is where past
+    regressions (e.g. LPWSTR marshaling on Python 3.12) actually broke.
+    """
+    spec = importlib.util.spec_from_file_location("pick_folder_dialog", _PICKER_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_pick_folder_uses_subprocess_script():
@@ -83,6 +97,39 @@ def test_pick_folder_dialog_script_has_no_tkinter_import():
     source = _PICKER_SCRIPT.read_text(encoding="utf-8")
     assert "import tkinter" not in source
     assert "from tkinter" not in source
+
+
+def test_pick_folder_path_assigns_display_name_without_raising(monkeypatch):
+    """Regression test for a ctypes TypeError on Python 3.12.
+
+    Mocks only the native call that pops the UI (SHBrowseForFolderW);
+    everything before it, including the BROWSEINFOW field assignment that
+    previously raised `TypeError: incompatible types, c_wchar_Array_260
+    instance instead of c_wchar_p instance`, runs for real.
+    """
+    module = _load_picker_module()
+    monkeypatch.setattr(module.shell32, "SHBrowseForFolderW", lambda *_a: 0)
+
+    assert module._pick_folder_path() is None
+
+
+def test_main_initializes_com_as_apartment_threaded(monkeypatch):
+    """SHBrowseForFolderW with BIF_NEWDIALOGSTYLE requires an STA. MTA makes
+    it silently return NULL (no dialog, no error) instead of raising, which
+    is indistinguishable from the user cancelling.
+    """
+    module = _load_picker_module()
+    calls = []
+    monkeypatch.setattr(
+        module.ole32, "CoInitializeEx", lambda *args: calls.append(args)
+    )
+    monkeypatch.setattr(module.ole32, "CoUninitialize", lambda: None)
+    monkeypatch.setattr(module, "_pick_folder_path", lambda: None)
+
+    module.main()
+
+    assert calls == [(None, module.COINIT_APARTMENTTHREADED)]
+    assert module.COINIT_APARTMENTTHREADED == 0x2
 
 
 @patch("app.folder_picker.os.startfile")

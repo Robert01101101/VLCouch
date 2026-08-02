@@ -40,7 +40,8 @@ Add `data-testid` to new interactive elements:
 | Settings rescan disabled hint | `settings-rescan-disabled-hint` |
 | Settings last scan stats | `settings-last-scan-stats` |
 | Settings full rescan button | `settings-full-rescan` |
-| Settings danger zone section | `settings-danger-zone` |
+| Settings reset app data toggle | `settings-reset-app-data` |
+| Settings reset danger zone panel | `settings-danger-zone` |
 | Settings reset all data button | `settings-reset-data` |
 | Settings reset type-to-confirm input | `settings-reset-confirm` |
 | Settings reset result notice | `settings-reset-notice` |
