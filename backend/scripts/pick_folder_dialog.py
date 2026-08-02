@@ -112,7 +112,7 @@ def _pick_folder_path() -> str | None:
     bi = BROWSEINFOW()
     bi.lpszTitle = "Select a folder"
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
-    bi.pszDisplayName = display_name
+    bi.pszDisplayName = ctypes.cast(display_name, wintypes.LPWSTR)
 
     pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
     if not pidl:
