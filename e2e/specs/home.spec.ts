@@ -15,7 +15,7 @@ test.describe('Home page', () => {
     const rescan = page.getByTestId('rescan-library')
     await rescan.click()
     await expect(rescan).toHaveText('Scanning...')
-    await expect(rescan).toHaveText('Rescan Library', { timeout: 10000 })
+    await expect(rescan).toHaveText('Scan for changes', { timeout: 10000 })
   })
 
   test('search finds library items', async ({ page }) => {

@@ -44,7 +44,7 @@ export default function GlobalStatusBar() {
 
   return (
     <div
-      className="border-b border-gray-800 bg-black/40 px-6 py-2"
+      className="pointer-events-none absolute left-0 right-0 top-full border-b border-gray-800 bg-black/40 px-6 py-2"
       data-testid="global-status-bar"
     >
       <div className="mx-auto flex max-w-[1920px] flex-wrap items-center gap-4 text-sm text-gray-300">

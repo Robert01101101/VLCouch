@@ -49,6 +49,11 @@ describe('Settings', () => {
       ...patch,
     }))
     api.updateMediaRoots.mockImplementation(async (roots) => ({ roots }))
+    api.resetData.mockResolvedValue({
+      status: 'reset_complete',
+      media_roots_preserved: 0,
+      scan_started: false,
+    })
   })
 
   it('shows loading state', () => {
@@ -94,6 +99,10 @@ describe('Settings', () => {
     expect(screen.getByTestId('settings-diagnostics-library-counts')).toHaveTextContent(
       '2 movies, 1 shows, 5 episodes'
     )
+    expect(screen.getByTestId('rescan-library')).toHaveTextContent('Scan for changes')
+    expect(screen.getByTestId('settings-full-rescan')).toHaveTextContent('Full rescan')
+    expect(screen.getByTestId('settings-danger-zone')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-reset-data')).toBeDisabled()
   })
 
   it('appends dev to version in development mode', async () => {
@@ -106,10 +115,11 @@ describe('Settings', () => {
   it('disables rescan when no media folders are configured', async () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
     expect(await screen.findByTestId('rescan-library')).toBeDisabled()
+    expect(screen.getByTestId('settings-full-rescan')).toBeDisabled()
     expect(screen.getByTestId('settings-rescan-disabled-hint')).toBeInTheDocument()
   })
 
-  it('calls onScan when rescan is clicked', async () => {
+  it('calls onScan with quick mode when scan for changes is clicked', async () => {
     api.fetchMediaRoots.mockResolvedValue({
       roots: [{ path: 'D:\\Movies', type: 'movies' }],
     })
@@ -121,10 +131,29 @@ describe('Settings', () => {
     await screen.findByTestId('rescan-library')
     fireEvent.click(screen.getByTestId('rescan-library'))
     await waitFor(() => {
-      expect(onScan).toHaveBeenCalled()
+      expect(onScan).toHaveBeenCalledWith('quick')
     })
     expect(await screen.findByTestId('settings-last-scan-stats')).toHaveTextContent(
       'Last scan: 1 movies'
+    )
+  })
+
+  it('calls onScan with full mode when full rescan is clicked', async () => {
+    api.fetchMediaRoots.mockResolvedValue({
+      roots: [{ path: 'D:\\Movies', type: 'movies' }],
+    })
+    const onScan = vi.fn().mockResolvedValue({
+      running: false,
+      last_stats: { movies: 0, episodes: 0, errors: 0, renamed: 2, removed: 1 },
+    })
+    render(<Settings scanning={false} onScan={onScan} />)
+    await screen.findByTestId('settings-full-rescan')
+    fireEvent.click(screen.getByTestId('settings-full-rescan'))
+    await waitFor(() => {
+      expect(onScan).toHaveBeenCalledWith('full')
+    })
+    expect(await screen.findByTestId('settings-last-scan-stats')).toHaveTextContent(
+      '2 moved, 1 removed'
     )
   })
 
@@ -340,6 +369,53 @@ describe('Settings', () => {
     })
     expect(await screen.findByTestId('settings-update-current')).toHaveTextContent(
       'latest version'
+    )
+  })
+
+  it('keeps reset button disabled until RESET is typed', async () => {
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    const resetButton = await screen.findByTestId('settings-reset-data')
+    expect(resetButton).toBeDisabled()
+
+    fireEvent.change(screen.getByTestId('settings-reset-confirm'), {
+      target: { value: 'reset' },
+    })
+    expect(resetButton).toBeDisabled()
+
+    fireEvent.change(screen.getByTestId('settings-reset-confirm'), {
+      target: { value: 'RESET' },
+    })
+    expect(resetButton).toBeEnabled()
+  })
+
+  it('resets data and shows a notice when confirmed', async () => {
+    api.resetData.mockResolvedValue({
+      status: 'reset_complete',
+      media_roots_preserved: 1,
+      scan_started: true,
+    })
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    fireEvent.change(await screen.findByTestId('settings-reset-confirm'), {
+      target: { value: 'RESET' },
+    })
+    fireEvent.click(screen.getByTestId('settings-reset-data'))
+    await waitFor(() => {
+      expect(api.resetData).toHaveBeenCalled()
+    })
+    expect(await screen.findByTestId('settings-reset-notice')).toHaveTextContent(
+      'full rescan has started'
+    )
+  })
+
+  it('shows action error when reset fails', async () => {
+    api.resetData.mockRejectedValue(new Error('Reset failed'))
+    render(<Settings scanning={false} onScan={vi.fn()} />)
+    fireEvent.change(await screen.findByTestId('settings-reset-confirm'), {
+      target: { value: 'RESET' },
+    })
+    fireEvent.click(screen.getByTestId('settings-reset-data'))
+    expect(await screen.findByTestId('settings-action-error')).toHaveTextContent(
+      'Reset failed'
     )
   })
 })

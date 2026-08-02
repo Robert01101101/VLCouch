@@ -126,8 +126,9 @@ export async function setShowWatchStatus(showId, watched) {
   return res.json()
 }
 
-export async function triggerScan() {
-  const res = await fetch(`${API_BASE}/api/scan`, { method: 'POST' })
+export async function triggerScan(mode = 'quick') {
+  const params = new URLSearchParams({ mode })
+  const res = await fetch(`${API_BASE}/api/scan?${params}`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to start scan')
   return res.json()
 }
@@ -207,6 +208,15 @@ export async function pickMediaFolder() {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.detail || 'Failed to open folder picker')
+  }
+  return res.json()
+}
+
+export async function resetData() {
+  const res = await fetch(`${API_BASE}/api/settings/reset-data`, { method: 'POST' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || 'Failed to reset data')
   }
   return res.json()
 }

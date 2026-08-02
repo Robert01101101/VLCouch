@@ -1,8 +1,11 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from sqlmodel import Session, select
+
+import app.db as db
 import app.settings_store as settings_store
 from app.metadata import enrich_show, lookup_overview
-from app.models import Show
+from app.models import Movie, Show
 
 
 def test_get_settings_returns_defaults(client):
@@ -211,3 +214,70 @@ def test_get_update_status_refresh(mock_check, client):
     assert data["update_available"] is True
     assert data["latest_version"] == "0.2.0"
     mock_check.assert_awaited_once_with(force=True)
+
+
+def test_reset_data_rejects_while_scan_running(empty_client):
+    with patch("app.routers.settings.scan_state.is_scanning", return_value=True):
+        response = empty_client.post("/api/settings/reset-data")
+        assert response.status_code == 409
+
+
+def test_reset_data_wipes_db_and_preserves_media_roots(empty_client, tmp_path):
+    movies_dir = tmp_path / "movies"
+    movies_dir.mkdir()
+    empty_client.put(
+        "/api/media-roots",
+        json={"roots": [{"path": str(movies_dir), "type": "movies"}]},
+    )
+
+    with Session(db.engine) as session:
+        session.add(Movie(title="Old Movie", file_path="old.mkv"))
+        session.commit()
+
+    with patch("app.routers.settings.scan_state.start_background_scan", return_value=True):
+        response = empty_client.post("/api/settings/reset-data")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "reset_complete"
+    assert data["media_roots_preserved"] == 1
+    assert data["scan_started"] is True
+
+    roots_response = empty_client.get("/api/media-roots")
+    assert roots_response.json()["roots"] == [{"path": str(movies_dir), "type": "movies"}]
+
+    with Session(db.engine) as session:
+        assert session.exec(select(Movie)).all() == []
+
+
+def test_reset_data_without_media_roots_does_not_trigger_scan(empty_client):
+    empty_client.put("/api/media-roots", json={"roots": []})
+
+    response = empty_client.post("/api/settings/reset-data")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["media_roots_preserved"] == 0
+    assert data["scan_started"] is False
+
+
+def test_reset_data_stops_active_playback_session(empty_client):
+    from app.playback_service import create_session, get_active_session
+
+    with Session(db.engine) as session:
+        create_session(
+            session,
+            mode="single",
+            pid=None,
+            http_port=9080,
+            http_password="secret",
+            playlist_path=None,
+            current_item_type="movie",
+            current_item_id=1,
+        )
+        assert get_active_session(session) is not None
+
+    response = empty_client.post("/api/settings/reset-data")
+    assert response.status_code == 200
+
+    with Session(db.engine) as session:
+        assert get_active_session(session) is None

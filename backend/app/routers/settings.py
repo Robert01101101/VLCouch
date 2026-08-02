@@ -1,12 +1,17 @@
+import shutil
+from pathlib import Path
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
-from app import settings_store
-from app.config import TEST_MODE
+import app.db as db
+from app import scan_state, settings_store
+from app.config import PLAYLISTS_DIR, POSTERS_DIR, TEST_MODE
 from app.db import get_session
 from app.dependencies import DEPENDENCIES, install_dependency
 from app.folder_picker import pick_folder
+from app.playback_service import finalize_active_session, get_active_session
 from app.thumbnail_service import queue_all_thumbnails_backfill
 from app.update_check import check_for_update
 
@@ -151,3 +156,58 @@ def install_dependency_package(name: str):
         return install_dependency(name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _clear_directory_contents(directory: Path) -> None:
+    if not directory.exists():
+        return
+    for entry in directory.iterdir():
+        if entry.is_dir():
+            shutil.rmtree(entry, ignore_errors=True)
+        else:
+            entry.unlink(missing_ok=True)
+
+
+@router.post("/settings/reset-data")
+def reset_data(background_tasks: BackgroundTasks):
+    """Wipe the library database, posters, and playlists, preserving media folders.
+
+    A running scan blocks the reset outright (mid-scan writes would race the
+    wipe). An active playback session is instead stopped, since its rows are
+    about to be deleted anyway. The pre-wipe session is opened and closed
+    explicitly (rather than injected via Depends) so its connection is fully
+    released before the engine is disposed and the SQLite file is deleted —
+    Windows refuses to delete a file with an open handle.
+    """
+    if scan_state.is_scanning():
+        raise HTTPException(status_code=409, detail="Cannot reset while a scan is running")
+
+    preserved_roots = settings_store.media_roots()
+
+    with Session(db.engine) as session:
+        if get_active_session(session):
+            finalize_active_session(session, terminate_vlc=True)
+
+    db_file = db.engine.url.database
+    db.engine.dispose()
+    if db_file:
+        Path(db_file).unlink(missing_ok=True)
+
+    _clear_directory_contents(POSTERS_DIR)
+    _clear_directory_contents(PLAYLISTS_DIR)
+
+    db.init_db()
+    with Session(db.engine) as new_session:
+        settings_store.init_settings(new_session)
+        if preserved_roots:
+            settings_store.set_media_roots(new_session, preserved_roots)
+
+    scan_started = bool(preserved_roots) and scan_state.start_background_scan(
+        background_tasks, mode="full"
+    )
+
+    return {
+        "status": "reset_complete",
+        "media_roots_preserved": len(preserved_roots),
+        "scan_started": scan_started,
+    }
