@@ -33,7 +33,7 @@ After changes to `frontend/src/components/`, `frontend/src/pages/`, or `frontend
 | `SearchBar.test.jsx` | search input, results display |
 | `Home.test.jsx` | loading, error, browse rows, hero banner |
 | `ShowDetail.test.jsx` | episodes, watched toggle, season bulk watch |
-| `Settings.test.jsx` | settings page, toggles, rescan |
+| `Settings.test.jsx` | settings page, toggles, quick/full scan, danger zone reset |
 | `GlobalStatusBar.test.jsx` | global scan/thumbnail status indicators |
 | `MediaFoldersEditor.test.jsx` | media folder picker, manual path entry |
 

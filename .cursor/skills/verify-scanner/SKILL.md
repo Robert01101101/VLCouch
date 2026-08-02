@@ -37,7 +37,7 @@ After changes to:
 
 | File | Covers |
 |------|--------|
-| `test_scanner.py` | `scan_library`, episode parsing, supplemental content, fixture media |
+| `test_scanner.py` | `scan_library` (upsert, reconcile-on-rename, stale-path pruning, quick/full mtime-skip), episode parsing, supplemental content, fixture media |
 | `test_library_api.py` | browse/movies/shows after scan (indirect scanner coverage) |
 
 ## Self-correction loop

@@ -27,6 +27,8 @@ MEDIA_ROOTS (.env)
 
 **Play/watch flow:** Play launches VLC with per-session HTTP remote control. A background poller tracks playback position and marks items watched on completion (~90% or last 30s). TV episodes play as M3U binge playlists (all remaining unwatched in the show). Thumbnails are generated on completion or manual mark watched.
 
+**Scan flow:** `POST /api/scan?mode=quick|full` (Settings → "Scan for changes" / "Full rescan") is orchestrated by `scan_state.py`, which calls `library_scan.scan_library()`. Upserts reconcile by `file_path` first, then fall back to `(show, season, episode)` for episodes or normalized title+year for movies, so moved/renamed files update the existing row instead of duplicating it. `quick` mode skips guessit re-parsing for files whose `file_mtime`/`file_size` match the DB; `full` always re-parses. After walking the media roots, stale `Movie`/`Episode` rows (and their `WatchProgress`) whose `file_path` no longer exists on disk are pruned. Settings → Danger zone's "Reset all data" (`POST /api/settings/reset-data`) wipes the DB/posters/playlists, preserves media roots, and triggers a background full rescan.
+
 With the backend running, inspect all endpoints and schemas at **http://localhost:8000/docs** (OpenAPI).
 
 ## Commands
@@ -65,7 +67,9 @@ Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 |------|---------------|
 | Home browse rows, hero, search | `backend/app/routers/library.py` |
 | Filename / folder parsing | `backend/app/scanner.py` |
-| Scan orchestration | `backend/app/library_scan.py` |
+| Scan orchestration (upsert, reconcile, prune, mtime/size skip) | `backend/app/library_scan.py` |
+| Scan state, `quick`/`full` mode, background trigger | `backend/app/scan_state.py` |
+| Reset library data (danger zone) | `backend/app/routers/settings.py` (`POST /api/settings/reset-data`) |
 | Thumbnail extraction | `backend/app/thumbnail_service.py`, `backend/app/thumbnail_jobs.py`, `backend/app/thumbnail_worker.py` |
 | VLC launch + playback tracking | `backend/app/routers/play.py`, `backend/app/vlc.py`, `backend/app/playback_service.py`, `backend/app/playback_poller.py`, `backend/app/vlc_http.py`, `backend/app/vlc_playlist.py` |
 | Watch status + resume position | `backend/app/routers/watch.py`, `backend/app/watch_service.py`, `backend/app/library_progress.py` |
@@ -75,7 +79,7 @@ Dev/git installs are unchanged (`backend/data/`, `backend/.venv/`).
 | Media folder picker | `backend/app/folder_picker.py`, `backend/scripts/pick_folder_dialog.py` |
 | Wikipedia metadata | `backend/app/metadata.py` |
 | DB models | `backend/app/models.py`, `backend/app/db.py` |
-| App startup, scan trigger | `backend/app/main.py` |
+| App startup, scan endpoints | `backend/app/main.py` (delegates to `scan_state.py`) |
 | Frontend API client | `frontend/src/api.js` |
 | Home page + hero UI | `frontend/src/pages/Home.jsx`, `frontend/src/components/HeroBanner.jsx`, `frontend/src/components/Row.jsx` |
 | Show detail / episodes | `frontend/src/pages/ShowDetail.jsx` |
@@ -103,8 +107,9 @@ After every feature change:
 - **db.engine import:** Import `app.db as db` and use `db.engine` after test overrides — not `from app.db import engine`
 - **TEST_MODE:** Set `TEST_MODE=true` in tests to skip VLC launch and background thumbnail jobs
 - **Windows paths:** SQLite and media paths must handle backslashes; see `backend/app/db.py`
-- **SCAN_LIMIT vs rescan:** `SCAN_LIMIT` caps startup scans only; **Rescan Library** always scans the full library
+- **SCAN_LIMIT vs rescan:** `SCAN_LIMIT` caps startup scans only; **Scan for changes** / **Full rescan** always scan the full library
 - **E2E ports:** E2E uses isolated ports (backend 8001, frontend 5174) so dev servers are unaffected
+- **Windows file locks on reset:** `reset-data` must close any open `Session` (not just `engine.dispose()`) before deleting `library.db` — an open connection blocks the delete on Windows
 
 ## Do not touch
 

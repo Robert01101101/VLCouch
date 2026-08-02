@@ -28,14 +28,14 @@ After any change under `backend/app/` — routers, models, scanner, config, VLC/
 
 | File | Covers |
 |------|--------|
-| `test_health.py` | `GET /api/health`, `GET /api/thumbnails/status` |
+| `test_health.py` | `GET /api/health`, `GET /api/thumbnails/status`, `POST /api/scan` modes, `GET /api/scan/status` |
 | `test_thumbnail_worker.py` | thumbnail queue `worker_status()` |
 | `test_folder_picker.py` | Windows folder picker subprocess |
 | `test_media_roots_api.py` | media roots CRUD, pick-folder responses |
 | `test_library_api.py` | browse, movies, shows, show detail, search |
 | `test_watch_api.py` | watch-status, season watch-status, continue-watching |
 | `test_play_api.py` | play endpoint, TEST_MODE VLC skip |
-| `test_settings_api.py` | GET/PATCH settings |
+| `test_settings_api.py` | GET/PATCH settings, `POST /api/settings/reset-data` |
 | `test_thumbnails.py` | thumbnail cache, seek logic, cache version |
 | `test_ffmpeg_detection.py` | ffmpeg path detection, winget fallbacks |
 | `test_scanner.py` | scan_library against fixture media (see `verify-scanner` skill) |

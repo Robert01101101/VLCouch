@@ -29,7 +29,7 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | POST | `/api/watch-status/{item_type}/{item_id}` | `watch.py` | `setWatchStatus` |
 | POST | `/api/shows/{show_id}/seasons/{season}/watch-status` | `watch.py` | `setSeasonWatchStatus` |
 | POST | `/api/shows/{show_id}/watch-status` | `watch.py` | `setShowWatchStatus` |
-| POST | `/api/scan` | `main.py` | `triggerScan` |
+| POST | `/api/scan?mode=quick\|full` | `main.py` | `triggerScan` |
 | GET | `/api/scan/status` | `main.py` | `fetchScanStatus` |
 | GET | `/api/thumbnails/status` | `main.py` | `fetchThumbnailStatus` |
 | GET | `/api/settings` | `settings.py` | `fetchSettings` |
@@ -39,6 +39,7 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 | PUT | `/api/media-roots` | `settings.py` | `updateMediaRoots` |
 | POST | `/api/media-roots/pick-folder` | `settings.py` | `pickMediaFolder` |
 | POST | `/api/dependencies/{name}/install` | `settings.py` | `installDependency` |
+| POST | `/api/settings/reset-data` | `settings.py` | `resetData` |
 
 ## Response shapes (non-obvious)
 
@@ -52,6 +53,10 @@ When adding or renaming an endpoint, update **both** the router and `frontend/sr
 
 **`GET /api/thumbnails/status`** — `{ busy: bool, queue_size: int, in_flight: int }`
 
-**`GET /api/scan/status`** — `{ running: bool, last_stats: object \| null }`
+**`GET /api/scan/status`** — `{ running: bool, last_stats: object \| null }`. `last_stats` includes `movies`, `episodes`, `skipped`, `errors`, `removed` (stale rows pruned), `renamed` (reconciled moved/renamed files), `skipped_unchanged` (mtime/size-matched files skipped in quick mode), `mode`.
+
+**`POST /api/scan?mode=quick|full`** — `quick` (default) skips guessit re-parsing for files whose mtime/size match the DB; `full` always re-parses. Orchestration lives in `app/scan_state.py` (shared by the endpoint and `reset-data`'s post-wipe rescan). Response: `{ status: "scan_started" | "scan_already_running", mode? }`.
+
+**`POST /api/settings/reset-data`** — Wipes `library.db`, `posters/*`, `playlists/*`; preserves configured media roots and triggers a background full rescan if any are set. Rejects with 409 while a scan is running; stops any active playback session first. Response: `{ status: "reset_complete", media_roots_preserved: int, scan_started: bool }`.
 
 Poster images are served at `/posters/{filename}` (static mount in `main.py`); URLs appear in API response fields like `thumbnail_url`, not as separate api.js calls.
