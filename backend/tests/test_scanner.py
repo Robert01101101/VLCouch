@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 import app.db as db
 from app.config import MEDIA_ROOTS
 from app.library_scan import scan_library
-from app.models import Episode, Movie, Show
+from app.models import Episode, Movie, Show, WatchProgress
 from app.scanner import (
     extract_show_title_from_path,
     is_supplemental_content,
@@ -265,3 +265,138 @@ def test_fixture_media_files_exist():
         assert root_path.exists(), f"Fixture root missing: {root_path}"
         video_files = list(root_path.rglob("*.mkv"))
         assert len(video_files) >= 1, f"No .mkv files under {root_path}"
+
+
+def test_rescan_reconciles_renamed_episode_file(empty_client, tmp_path):
+    """Regression: moving/renaming an episode file updates the row in place, no duplicate."""
+    tv_root = Path(MEDIA_ROOTS[1]["path"])
+    original = tv_root / "Breaking Bad" / "Season 01" / "Breaking Bad - S01E01.mkv"
+    renamed_dir = tv_root / "Breaking Bad" / "Season 01 Renamed"
+    renamed = renamed_dir / "Breaking Bad - S01E01.mkv"
+
+    with Session(db.engine) as session:
+        scan_library(session, MEDIA_ROOTS)
+        show = session.exec(select(Show).where(Show.title == "Breaking Bad")).first()
+        show_id = show.id
+        original_episode = session.exec(
+            select(Episode).where(
+                Episode.show_id == show_id, Episode.season == 1, Episode.episode == 1
+            )
+        ).first()
+        original_id = original_episode.id
+
+    try:
+        renamed_dir.mkdir(parents=True, exist_ok=True)
+        original.rename(renamed)
+
+        with Session(db.engine) as session:
+            stats = scan_library(session, MEDIA_ROOTS)
+
+            episodes = session.exec(
+                select(Episode).where(
+                    Episode.show_id == show_id, Episode.season == 1, Episode.episode == 1
+                )
+            ).all()
+            assert len(episodes) == 1
+            assert episodes[0].id == original_id
+            assert episodes[0].file_path == str(renamed)
+        assert stats["renamed"] >= 1
+    finally:
+        if renamed.exists():
+            renamed.rename(original)
+        if renamed_dir.exists() and not any(renamed_dir.iterdir()):
+            renamed_dir.rmdir()
+
+
+def test_rescan_reconciles_moved_movie_file(empty_client, tmp_path):
+    """Regression: moving a movie file updates the existing row instead of duplicating it."""
+    movies_root = Path(MEDIA_ROOTS[0]["path"])
+    original = movies_root / "The Matrix (1999).mkv"
+    moved_dir = movies_root / "Moved"
+    moved = moved_dir / "The Matrix (1999).mkv"
+
+    with Session(db.engine) as session:
+        scan_library(session, MEDIA_ROOTS)
+        movie = next(
+            m for m in session.exec(select(Movie)).all() if "Matrix" in m.title
+        )
+        movie_id = movie.id
+
+    try:
+        moved_dir.mkdir(parents=True, exist_ok=True)
+        original.rename(moved)
+
+        with Session(db.engine) as session:
+            stats = scan_library(session, MEDIA_ROOTS)
+            movies = [
+                m for m in session.exec(select(Movie)).all() if "Matrix" in m.title
+            ]
+            assert len(movies) == 1
+            assert movies[0].id == movie_id
+            assert movies[0].file_path == str(moved)
+        assert stats["renamed"] >= 1
+    finally:
+        if moved.exists():
+            moved.rename(original)
+        if moved_dir.exists() and not any(moved_dir.iterdir()):
+            moved_dir.rmdir()
+
+
+def test_rescan_prunes_deleted_movie_and_its_watch_progress(empty_client, tmp_path):
+    """Regression: deleting a file on disk removes the stale row and its watch progress."""
+    movies_root = Path(MEDIA_ROOTS[0]["path"])
+    extra = movies_root / "Temp Movie (2021).mkv"
+    extra.write_bytes(b"x")
+
+    try:
+        with Session(db.engine) as session:
+            scan_library(session, MEDIA_ROOTS)
+            movie = next(
+                m for m in session.exec(select(Movie)).all() if "Temp Movie" in m.title
+            )
+            movie_id = movie.id
+            session.add(WatchProgress(item_type="movie", item_id=movie_id, watched=True))
+            session.commit()
+
+        extra.unlink()
+
+        with Session(db.engine) as session:
+            stats = scan_library(session, MEDIA_ROOTS)
+            assert stats["removed"] >= 1
+            assert session.get(Movie, movie_id) is None
+            remaining_progress = session.exec(
+                select(WatchProgress).where(
+                    WatchProgress.item_type == "movie", WatchProgress.item_id == movie_id
+                )
+            ).all()
+            assert remaining_progress == []
+    finally:
+        if extra.exists():
+            extra.unlink()
+
+
+def test_scan_records_file_mtime_and_size(empty_client, tmp_path):
+    with Session(db.engine) as session:
+        scan_library(session, MEDIA_ROOTS)
+        movie = session.exec(select(Movie)).first()
+        assert movie.file_mtime is not None
+        assert movie.file_size is not None
+        episode = session.exec(select(Episode)).first()
+        assert episode.file_mtime is not None
+        assert episode.file_size is not None
+
+
+def test_quick_mode_skips_unchanged_files_on_rescan(empty_client, tmp_path):
+    with Session(db.engine) as session:
+        scan_library(session, MEDIA_ROOTS, mode="quick")
+        stats = scan_library(session, MEDIA_ROOTS, mode="quick")
+        assert stats["skipped_unchanged"] >= 3
+        assert stats["movies"] == 0
+        assert stats["episodes"] == 0
+
+
+def test_full_mode_always_reparses_files(empty_client, tmp_path):
+    with Session(db.engine) as session:
+        scan_library(session, MEDIA_ROOTS, mode="quick")
+        stats = scan_library(session, MEDIA_ROOTS, mode="full")
+        assert stats["skipped_unchanged"] == 0

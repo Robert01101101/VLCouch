@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+
 def test_health(client):
     response = client.get("/api/health")
     assert response.status_code == 200
@@ -34,3 +37,43 @@ def test_thumbnail_status_reports_busy_when_in_flight(client):
         assert data["in_flight"] == 1
     finally:
         _in_flight.discard("movie:1")
+
+
+def test_trigger_scan_defaults_to_quick_mode(client):
+    with patch("app.main.scan_state.start_background_scan", return_value=True) as mock_start:
+        response = client.post("/api/scan")
+        assert response.status_code == 200
+        assert response.json() == {"status": "scan_started", "mode": "quick"}
+        assert mock_start.call_args.kwargs.get("mode") == "quick"
+
+
+def test_trigger_scan_full_mode(client):
+    with patch("app.main.scan_state.start_background_scan", return_value=True) as mock_start:
+        response = client.post("/api/scan?mode=full")
+        assert response.status_code == 200
+        assert response.json() == {"status": "scan_started", "mode": "full"}
+        assert mock_start.call_args.kwargs.get("mode") == "full"
+
+
+def test_trigger_scan_rejects_invalid_mode(client):
+    response = client.post("/api/scan?mode=bogus")
+    assert response.status_code == 422
+
+
+def test_trigger_scan_already_running(client):
+    with patch("app.main.scan_state.start_background_scan", return_value=False):
+        response = client.post("/api/scan")
+        assert response.status_code == 200
+        assert response.json() == {"status": "scan_already_running"}
+
+
+def test_scan_status_reports_stats_counters_after_scan(empty_client):
+    from app import scan_state
+
+    scan_state.run_scan(mode="quick")
+    response = empty_client.get("/api/scan/status")
+    assert response.status_code == 200
+    stats = response.json()["last_stats"]
+    assert stats["mode"] == "quick"
+    for key in ("removed", "renamed", "skipped_unchanged"):
+        assert key in stats

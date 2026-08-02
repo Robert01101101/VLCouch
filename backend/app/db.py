@@ -41,6 +41,24 @@ def _migrate_schema() -> None:
             if "genres" not in movie_cols:
                 conn.execute(text("ALTER TABLE movie ADD COLUMN genres TEXT"))
                 conn.commit()
+            if "file_mtime" not in movie_cols:
+                conn.execute(text("ALTER TABLE movie ADD COLUMN file_mtime REAL"))
+                conn.commit()
+            if "file_size" not in movie_cols:
+                conn.execute(text("ALTER TABLE movie ADD COLUMN file_size INTEGER"))
+                conn.commit()
+
+        episode_tables = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='episode'")
+        ).fetchone()
+        if episode_tables:
+            episode_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(episode)"))}
+            if "file_mtime" not in episode_cols:
+                conn.execute(text("ALTER TABLE episode ADD COLUMN file_mtime REAL"))
+                conn.commit()
+            if "file_size" not in episode_cols:
+                conn.execute(text("ALTER TABLE episode ADD COLUMN file_size INTEGER"))
+                conn.commit()
 
         wp_tables = conn.execute(
             text(
