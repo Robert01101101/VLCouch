@@ -147,16 +147,29 @@ export async function fetchThumbnailStatus() {
 
 /** Poll until background scan finishes (full library scans can take a while). */
 export async function waitForScanComplete({
-  pollMs = 2000,
+  pollMs = 200,
+  startTimeoutMs = 500,
   timeoutMs = 300000,
 } = {}) {
   const deadline = Date.now() + timeoutMs
+  const startDeadline = Date.now() + startTimeoutMs
+  let sawRunning = false
+
   while (Date.now() < deadline) {
     const status = await fetchScanStatus()
-    if (!status.running) {
+    if (status.running) {
+      sawRunning = true
+    }
+    if (sawRunning && !status.running) {
       return status
     }
-    await new Promise((resolve) => setTimeout(resolve, pollMs))
+    // Very fast scans can finish before the first poll; after a short grace
+    // period accept idle status so the UI does not stay stuck on "Scanning...".
+    if (!sawRunning && !status.running && Date.now() > startDeadline) {
+      return status
+    }
+    const delay = sawRunning ? pollMs : Math.min(pollMs, 50)
+    await new Promise((resolve) => setTimeout(resolve, delay))
   }
   throw new Error('Scan timed out')
 }

@@ -33,9 +33,8 @@ def last_stats() -> dict | None:
 def run_scan(mode: str = "quick") -> None:
     """Run a full-library scan synchronously against all configured media roots."""
     with _lock:
-        if _state["running"]:
-            return
-        _state["running"] = True
+        if not _state["running"]:
+            _state["running"] = True
     try:
         logger.info("Starting %s library scan...", mode)
         with DBSession(db.engine) as session:
@@ -46,12 +45,15 @@ def run_scan(mode: str = "quick") -> None:
         if settings_store.auto_generate_thumbnails():
             queue_all_thumbnails_backfill()
     finally:
-        _state["running"] = False
+        with _lock:
+            _state["running"] = False
 
 
 def start_background_scan(background_tasks: BackgroundTasks, mode: str = "quick") -> bool:
     """Queue a background scan. Returns False if a scan is already running."""
-    if _state["running"]:
-        return False
+    with _lock:
+        if _state["running"]:
+            return False
+        _state["running"] = True
     background_tasks.add_task(run_scan, mode)
     return True

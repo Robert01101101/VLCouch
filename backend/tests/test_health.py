@@ -77,3 +77,22 @@ def test_scan_status_reports_stats_counters_after_scan(empty_client):
     assert stats["mode"] == "quick"
     for key in ("removed", "renamed", "skipped_unchanged"):
         assert key in stats
+
+
+def test_start_background_scan_marks_running_before_task():
+    from unittest.mock import MagicMock
+
+    from app import scan_state
+
+    original_running = scan_state._state["running"]
+    try:
+        scan_state._state["running"] = False
+        tasks = MagicMock()
+
+        started = scan_state.start_background_scan(tasks, mode="quick")
+
+        assert started is True
+        assert scan_state.is_scanning() is True
+        tasks.add_task.assert_called_once_with(scan_state.run_scan, "quick")
+    finally:
+        scan_state._state["running"] = original_running
