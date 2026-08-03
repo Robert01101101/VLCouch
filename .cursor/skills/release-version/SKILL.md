@@ -15,7 +15,7 @@ End-user releases are **tag-driven**: push `vX.Y.Z` and [`.github/workflows/rele
 
 **Stable download URL** (for websites — always serves the latest release):
 
-`https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe`
+`https://github.com/potato-robert/VLCouch/releases/latest/download/VLCouchSetup.exe`
 
 ## Trigger phrases (use this skill)
 

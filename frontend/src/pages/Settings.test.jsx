@@ -17,7 +17,7 @@ describe('Settings', () => {
     vlc_playlist_advance: true,
     browse_row_random: false,
     version: '0.1.0',
-    github_url: 'https://github.com/Robert01101101/VLCouch',
+    github_url: 'https://github.com/potato-robert/VLCouch',
     diagnostics: {
       vlc_path: 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe',
       vlc_found: true,
@@ -41,7 +41,7 @@ describe('Settings', () => {
       current_version: '0.1.0',
       latest_version: '0.1.0',
       download_url: null,
-      release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+      release_url: 'https://github.com/potato-robert/VLCouch/releases',
       error: null,
     })
     api.updateSettings.mockImplementation(async (patch) => ({
@@ -88,7 +88,7 @@ describe('Settings', () => {
     expect(screen.getByTestId('settings-version')).toHaveTextContent('0.1.0')
     expect(screen.getByTestId('settings-github-link')).toHaveAttribute(
       'href',
-      'https://github.com/Robert01101101/VLCouch'
+      'https://github.com/potato-robert/VLCouch'
     )
     expect(screen.getByTestId('settings-dependencies')).toBeInTheDocument()
     expect(screen.getByTestId('settings-dependency-vlc-status')).toHaveTextContent('Installed')
@@ -331,7 +331,7 @@ describe('Settings', () => {
       current_version: '0.1.0',
       latest_version: '0.2.0',
       download_url: 'https://example.com/VLCouchSetup.exe',
-      release_url: 'https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0',
+      release_url: 'https://github.com/potato-robert/VLCouch/releases/tag/v0.2.0',
       error: null,
     })
     render(<Settings scanning={false} onScan={vi.fn()} />)
@@ -350,7 +350,7 @@ describe('Settings', () => {
         current_version: '0.1.0',
         latest_version: '0.1.0',
         download_url: null,
-        release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+        release_url: 'https://github.com/potato-robert/VLCouch/releases',
         error: null,
       })
       .mockResolvedValueOnce({
@@ -359,7 +359,7 @@ describe('Settings', () => {
         current_version: '0.1.0',
         latest_version: '0.1.0',
         download_url: null,
-        release_url: 'https://github.com/Robert01101101/VLCouch/releases',
+        release_url: 'https://github.com/potato-robert/VLCouch/releases',
         error: null,
       })
     render(<Settings scanning={false} onScan={vi.fn()} />)

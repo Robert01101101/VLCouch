@@ -37,7 +37,7 @@ See the **release-version** skill (`.cursor/skills/release-version/`) for the fu
 4. Push to `main`, then create and push a matching tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
 5. GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)) builds `dist/staging/`, compiles `VLCouchSetup.exe`, and attaches it to a GitHub Release.
 
-Stable download URL for websites: `https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe`
+Stable download URL for websites: `https://github.com/potato-robert/VLCouch/releases/latest/download/VLCouchSetup.exe`
 
 The E2E settings spec reads `VERSION` automatically (`e2e/helpers/appVersion.ts`). If you add new version assertions in tests, use that helper rather than hardcoding the semver.
 

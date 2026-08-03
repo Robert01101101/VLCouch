@@ -204,7 +204,7 @@ def test_get_update_status_refresh(mock_check, client):
         "current_version": "0.1.0",
         "latest_version": "0.2.0",
         "download_url": "https://example.com/VLCouchSetup.exe",
-        "release_url": "https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0",
+        "release_url": "https://github.com/potato-robert/VLCouch/releases/tag/v0.2.0",
         "error": None,
     }
 

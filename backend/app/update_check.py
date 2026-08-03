@@ -16,7 +16,7 @@ from app.settings_store import APP_VERSION, GITHUB_URL
 
 logger = logging.getLogger(__name__)
 
-RELEASES_API = "https://api.github.com/repos/Robert01101101/VLCouch/releases/latest"
+RELEASES_API = "https://api.github.com/repos/potato-robert/VLCouch/releases/latest"
 CACHE_TTL_SECONDS = 6 * 60 * 60
 INSTALLER_ASSET_NAME = "VLCouchSetup.exe"
 INSTALLER_ASSET_PATTERN = re.compile(r"^VLCouchSetup(?:-.+)?\.exe$", re.IGNORECASE)

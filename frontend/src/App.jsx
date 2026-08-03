@@ -48,7 +48,7 @@ export default function App() {
         <div className="flex items-center justify-between gap-6 max-w-[1920px] mx-auto">
           {isHome ? (
             <Link
-              to="https://github.com/Robert01101101/VLCouch"
+              to="https://github.com/potato-robert/VLCouch"
               target="_blank"
               className="flex items-center gap-2"
             >

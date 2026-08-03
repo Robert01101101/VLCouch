@@ -11,7 +11,7 @@ from app.version import load_app_version
 from app.vlc import find_vlc_path
 
 APP_VERSION = load_app_version()
-GITHUB_URL = "https://github.com/Robert01101101/VLCouch"
+GITHUB_URL = "https://github.com/potato-robert/VLCouch"
 
 KEY_METADATA_ENABLED = "metadata_enabled"
 KEY_SCAN_ON_STARTUP = "scan_on_startup"

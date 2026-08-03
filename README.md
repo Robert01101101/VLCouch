@@ -24,7 +24,7 @@ Scans folders on your PC, builds poster rows and a hero banner, and launches [VL
 
 ### Windows (recommended)
 
-1. Download **[VLCouchSetup.exe](https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe)** (always the latest release).
+1. Download **[VLCouchSetup.exe](https://github.com/potato-robert/VLCouch/releases/latest/download/VLCouchSetup.exe)** (always the latest release).
 2. Launch **VLCouch** from the Start menu → add movie/TV folders → **Scan for changes**.
 
 You also need [VLC](https://www.videolan.org/) (playback) and [ffmpeg](https://ffmpeg.org/) (thumbnails). On Windows, **Settings** shows their status and offers **Install (winget)** when available, or a download link otherwise.
@@ -44,7 +44,7 @@ Installs dependencies, builds the frontend, and creates a Desktop shortcut. Data
 Unofficial — no installer. Requires **Python 3.12+**, **Node 20+**, VLC, and ffmpeg:
 
 ```bash
-git clone https://github.com/Robert01101101/VLCouch.git && cd VLCouch
+git clone https://github.com/potato-robert/VLCouch.git && cd VLCouch
 cp docs/.env.example .env
 python3 -m venv backend/.venv && source backend/.venv/bin/activate
 pip install -r backend/requirements.txt

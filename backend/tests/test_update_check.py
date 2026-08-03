@@ -65,7 +65,7 @@ def test_check_for_update_reports_newer_release(monkeypatch):
 
     release = {
         "tag_name": "v0.2.0",
-        "html_url": "https://github.com/Robert01101101/VLCouch/releases/tag/v0.2.0",
+        "html_url": "https://github.com/potato-robert/VLCouch/releases/tag/v0.2.0",
         "assets": [
             {
                 "name": "VLCouchSetup.exe",
@@ -93,7 +93,7 @@ def test_check_for_update_uses_cache(monkeypatch):
 
     release = {
         "tag_name": "v0.1.0",
-        "html_url": "https://github.com/Robert01101101/VLCouch/releases/latest",
+        "html_url": "https://github.com/potato-robert/VLCouch/releases/latest",
         "assets": [],
     }
     mock_fetch = AsyncMock(return_value=release)

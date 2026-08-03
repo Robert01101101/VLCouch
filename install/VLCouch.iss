@@ -6,7 +6,7 @@
 
 #define MyAppName "VLCouch"
 #define MyAppPublisher "VLCouch"
-#define MyAppURL "https://github.com/Robert01101101/VLCouch"
+#define MyAppURL "https://github.com/potato-robert/VLCouch"
 #define MyAppExeName "launch.vbs"
 #define StagingDir "..\dist\staging"
 #define DataDir "{localappdata}\VLCouch\data"
