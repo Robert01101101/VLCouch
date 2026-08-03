@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import json
 import re
+import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
 
+from guessit import guessit
 from sqlmodel import Session, select
 
 from app.models import Movie
@@ -119,6 +121,122 @@ def parse_genres_from_tag_stem(stem: str) -> list[str]:
     return genres
 
 
+def _merge_genre_lists(existing: list[str], new: list[str]) -> list[str]:
+    seen = {genre.lower() for genre in existing}
+    merged = list(existing)
+    for genre in new:
+        key = genre.lower()
+        if key not in seen:
+            seen.add(key)
+            merged.append(genre)
+    return merged
+
+
+def parse_genres_from_nfo_xml(path: Path) -> list[str]:
+    """Parse ``<genre>`` elements from a Plex/Jellyfin-style NFO file."""
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError):
+        return []
+
+    genres: list[str] = []
+    seen: set[str] = set()
+    for elem in root.iter("genre"):
+        text = (elem.text or "").strip()
+        if not text:
+            continue
+        genre = normalize_genre(text)
+        if not genre:
+            continue
+        key = genre.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        genres.append(genre)
+    return genres
+
+
+def _find_nfo_beside_video(video_path: Path) -> Path | None:
+    folder = video_path.parent
+    stem = video_path.stem
+    for name in (f"{stem}.nfo", "movie.nfo"):
+        candidate = folder / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def extract_dash_sidecar_genres(video_path: Path) -> list[str]:
+    tag_file = find_genre_tag_file(video_path)
+    if not tag_file:
+        return []
+    return parse_genres_from_tag_stem(tag_file.stem)
+
+
+def extract_nfo_xml_genres(video_path: Path) -> list[str]:
+    nfo_path = _find_nfo_beside_video(video_path)
+    if not nfo_path:
+        return []
+    return parse_genres_from_nfo_xml(nfo_path)
+
+
+def extract_folder_tag_genres(video_path: Path) -> list[str]:
+    folder = video_path.parent
+    if not folder.is_dir():
+        return []
+
+    genres: list[str] = []
+    for path in folder.iterdir():
+        if not path.is_file():
+            continue
+        ext = path.suffix.lower()
+        if ext not in TAG_FILE_EXTENSIONS:
+            continue
+        if path.stem == video_path.stem:
+            continue
+        parsed = parse_genres_from_tag_stem(path.stem)
+        if parsed:
+            genres = _merge_genre_lists(genres, parsed)
+        elif ext == ".nfo":
+            genres = _merge_genre_lists(genres, parse_genres_from_nfo_xml(path))
+    return genres
+
+
+def extract_guessit_genres(video_path: Path) -> list[str]:
+    info = guessit(video_path.name)
+    raw_genres = info.get("genre")
+    if not raw_genres:
+        return []
+    if isinstance(raw_genres, str):
+        raw_genres = [raw_genres]
+    genres: list[str] = []
+    for raw in raw_genres:
+        genre = normalize_genre(str(raw))
+        if genre:
+            genres.append(genre)
+    return genres
+
+
+def extract_show_category_from_folder(show_folder: Path) -> str | None:
+    """Category/theme for a show from sidecar tag or NFO files in the show folder."""
+    if not show_folder.is_dir():
+        return None
+
+    for path in show_folder.iterdir():
+        if not path.is_file():
+            continue
+        ext = path.suffix.lower()
+        if ext in TAG_FILE_EXTENSIONS:
+            genres = parse_genres_from_tag_stem(path.stem)
+            if genres:
+                return genres[0]
+            if ext == ".nfo":
+                nfo_genres = parse_genres_from_nfo_xml(path)
+                if nfo_genres:
+                    return nfo_genres[0]
+    return None
+
+
 def find_genre_tag_file(video_path: Path) -> Path | None:
     """Best sidecar tag file in the same folder as the video."""
     folder = video_path.parent
@@ -145,13 +263,24 @@ def find_genre_tag_file(video_path: Path) -> Path | None:
     return candidates[0][2]
 
 
-def extract_movie_genres(video_path: Path, movies_root: Path | None = None) -> list[str]:
-    """Extract user genre tags from sidecar files beside a movie video."""
+def extract_movie_genres(
+    video_path: Path,
+    movies_root: Path | None = None,
+    *,
+    use_nfo_xml: bool = False,
+    use_folder_tags: bool = False,
+    use_guessit: bool = False,
+) -> list[str]:
+    """Extract user genre tags using enabled extractors (dash sidecar always first)."""
     _ = movies_root  # kept for call-site compatibility
-    tag_file = find_genre_tag_file(video_path)
-    if not tag_file:
-        return []
-    return parse_genres_from_tag_stem(tag_file.stem)
+    genres = extract_dash_sidecar_genres(video_path)
+    if use_nfo_xml:
+        genres = _merge_genre_lists(genres, extract_nfo_xml_genres(video_path))
+    if use_folder_tags:
+        genres = _merge_genre_lists(genres, extract_folder_tag_genres(video_path))
+    if use_guessit:
+        genres = _merge_genre_lists(genres, extract_guessit_genres(video_path))
+    return genres
 
 
 def analyze_movie_folders(

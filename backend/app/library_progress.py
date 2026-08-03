@@ -11,6 +11,10 @@ from app.config import PLAYBACK_MIN_RESUME_SECONDS
 from app.models import Episode, WatchProgress
 
 
+def is_main_episode(episode: Episode) -> bool:
+    return episode.episode_kind == "episode"
+
+
 def is_episode_watched(session: Session, episode_id: int) -> bool:
     progress = session.exec(
         select(WatchProgress).where(
@@ -25,10 +29,10 @@ def is_episode_watched(session: Session, episode_id: int) -> bool:
 def find_next_unwatched_after(
     session: Session, show_id: int, after_episode: Episode
 ) -> Episode | None:
-    """First unwatched episode after ``after_episode`` in season/episode order."""
+    """First unwatched main episode after ``after_episode`` in season/episode order."""
     episodes = session.exec(
         select(Episode)
-        .where(Episode.show_id == show_id)
+        .where(Episode.show_id == show_id, Episode.episode_kind == "episode")
         .order_by(Episode.season, Episode.episode)
     ).all()
     passed = False
@@ -61,6 +65,13 @@ def find_in_progress_item(session: Session) -> WatchProgress | None:
     ).all()
     for progress in candidates:
         if progress.last_position_at is not None:
+            if progress.item_type == "episode":
+                episode = session.get(Episode, progress.item_id)
+                if episode and not is_main_episode(episode):
+                    continue
+            return progress
+    for progress in candidates:
+        if progress.last_position_at is not None:
             return progress
     return candidates[0] if candidates else None
 
@@ -70,10 +81,10 @@ def remaining_unwatched_episodes(
     show_id: int,
     from_episode: Episode,
 ) -> list[Episode]:
-    """Episodes to play from a user click: that episode first, then later unwatched ones."""
+    """Main episodes to play from a user click: clicked item first, then later unwatched."""
     episodes = session.exec(
         select(Episode)
-        .where(Episode.show_id == show_id)
+        .where(Episode.show_id == show_id, Episode.episode_kind == "episode")
         .order_by(Episode.season, Episode.episode)
     ).all()
     result: list[Episode] = []
@@ -114,7 +125,7 @@ def most_recent_watched_episode_on_show(
 ) -> Episode | None:
     episodes = session.exec(
         select(Episode)
-        .where(Episode.show_id == show_id)
+        .where(Episode.show_id == show_id, Episode.episode_kind == "episode")
         .order_by(Episode.season, Episode.episode)
     ).all()
     best_episode = None
@@ -137,7 +148,10 @@ def most_recent_watched_episode_on_show(
 
 def find_in_progress_episode_on_show(session: Session, show_id: int) -> Episode | None:
     episodes = session.exec(
-        select(Episode).where(Episode.show_id == show_id)
+        select(Episode).where(
+            Episode.show_id == show_id,
+            Episode.episode_kind == "episode",
+        )
     ).all()
     best_episode = None
     best_at: datetime | None = None

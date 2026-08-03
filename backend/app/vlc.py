@@ -342,7 +342,10 @@ def play_item(
         episode = session.get(Episode, item_id)
         if not episode:
             raise ValueError(f"Episode {item_id} not found")
-        if settings_store.vlc_tv_playlist():
+        if (
+            settings_store.vlc_tv_playlist()
+            and episode.episode_kind == "episode"
+        ):
             return launch_playlist(session, episode=episode, from_start=from_start)
         file_path, subtitle_path, title = resolve_playable(session, item_type, item_id)
         return launch_single(

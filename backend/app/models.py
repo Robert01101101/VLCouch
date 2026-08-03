@@ -36,6 +36,7 @@ class Episode(SQLModel, table=True):
     file_path: str = Field(unique=True, index=True)
     subtitle_path: str | None = None
     thumbnail_path: str | None = None
+    episode_kind: str = Field(default="episode", index=True)  # episode | supplemental
     file_mtime: float | None = None
     file_size: int | None = None
 

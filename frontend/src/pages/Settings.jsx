@@ -11,6 +11,7 @@ import {
   updateSettings,
 } from '../api'
 
+import LibraryStructureGuide from '../components/LibraryStructureGuide'
 import MediaFoldersEditor from '../components/MediaFoldersEditor'
 
 function SettingToggle({ testId, label, description, checked, disabled, onChange }) {
@@ -425,6 +426,10 @@ export default function Settings({
               Where your movies and TV shows live on this PC.
             </p>
             <MediaFoldersEditor roots={mediaRoots} onChange={handleMediaRootsChange} />
+          </div>
+
+          <div className="border-t border-gray-700 pt-6">
+            <LibraryStructureGuide />
           </div>
 
           <div className="border-t border-gray-700 pt-6">

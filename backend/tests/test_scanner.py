@@ -7,6 +7,7 @@ from app.config import MEDIA_ROOTS
 from app.library_scan import scan_library
 from app.models import Episode, Movie, Show, WatchProgress
 from app.scanner import (
+    classify_tv_content,
     extract_show_title_from_path,
     is_supplemental_content,
     parse_episode,
@@ -32,8 +33,8 @@ def test_scan_library_fixture_media(empty_client, tmp_path):
         assert len(episodes) >= 2
 
 
-def test_featurette_files_are_skipped_not_indexed(empty_client, tmp_path):
-    """Deleted scenes/featurettes should not become shows or episodes."""
+def test_featurette_files_index_as_extras_not_episodes(empty_client, tmp_path):
+    """Deleted scenes/featurettes become extras on the show, not duplicate episodes."""
     tv_root = Path(MEDIA_ROOTS[1]["path"])
     featurette = (
         tv_root
@@ -48,20 +49,30 @@ def test_featurette_files_are_skipped_not_indexed(empty_client, tmp_path):
 
     try:
         with Session(db.engine) as session:
-            stats = scan_library(session, MEDIA_ROOTS)
+            scan_library(session, MEDIA_ROOTS)
             shows = session.exec(select(Show)).all()
             breaking_bad = next(s for s in shows if s.title == "Breaking Bad")
             fake_shows = [
                 s for s in shows if "Deleted Scenes" in s.title and s.id != breaking_bad.id
             ]
             assert fake_shows == []
-            assert stats["skipped"] >= 1
 
-            episodes = session.exec(
-                select(Episode).where(Episode.show_id == breaking_bad.id)
+            main_episodes = session.exec(
+                select(Episode).where(
+                    Episode.show_id == breaking_bad.id,
+                    Episode.episode_kind == "episode",
+                )
             ).all()
-            assert len(episodes) == 2
-            assert not any(ep.title == "Pilot Deleted Scenes" for ep in episodes)
+            assert len(main_episodes) == 2
+
+            extras = session.exec(
+                select(Episode).where(
+                    Episode.show_id == breaking_bad.id,
+                    Episode.episode_kind == "supplemental",
+                )
+            ).all()
+            assert len(extras) == 1
+            assert extras[0].title == "Pilot Deleted Scenes"
     finally:
         if featurette.exists():
             featurette.unlink()
@@ -99,7 +110,10 @@ def test_bracketed_folder_layout_keeps_one_show_per_series(empty_client, tmp_pat
             assert len(office_shows) == 1
             assert office_shows[0].category == "Sitcoms"
             episodes = session.exec(
-                select(Episode).where(Episode.show_id == office_shows[0].id)
+                select(Episode).where(
+                    Episode.show_id == office_shows[0].id,
+                    Episode.episode_kind == "episode",
+                )
             ).all()
             assert len(episodes) == 1
             assert episodes[0].episode == 1
@@ -127,6 +141,80 @@ def test_is_supplemental_content_detects_featurette_paths():
         "D:/TV/[Sitcoms]/The Office/Featurettes/Season 1/Deleted Scenes/file.mkv"
     )
     assert is_supplemental_content(path)
+
+
+def test_is_supplemental_content_detects_bloopers_folder():
+    path = Path("D:/TV/Mystery Manor/Bloopers/outtake.mkv")
+    assert is_supplemental_content(path)
+
+
+def test_classify_tv_content_skips_when_strict():
+    path = Path("D:/TV/Mystery Manor/Bloopers/outtake.mkv")
+    assert classify_tv_content(path, strict_supplemental_skip=True) == "skip"
+
+
+def test_classify_tv_content_indexes_supplemental_when_not_strict():
+    path = Path("D:/TV/Mystery Manor/Bloopers/outtake.mkv")
+    assert classify_tv_content(path, strict_supplemental_skip=False) == "supplemental"
+
+
+def test_parse_episode_context_supplemental_without_numbers():
+    from app.scanner import parse_episode_context
+
+    parsed = parse_episode_context(
+        Path("D:/TV/Mystery Manor/Bloopers/outtake.mkv"),
+        Path("D:/TV"),
+        strict_supplemental_skip=False,
+    )
+    assert parsed is not None
+    assert parsed["episode_kind"] == "supplemental"
+    assert parsed["season"] == 0
+    assert parsed["episode"] is None
+    assert parsed["show_title"] == "Mystery Manor"
+
+
+def test_parse_genres_from_nfo_xml(tmp_path):
+    from app.genre_tags import extract_movie_genres, parse_genres_from_nfo_xml
+
+    folder = tmp_path / "Harbor Lights (2018)"
+    folder.mkdir()
+    video = folder / "Harbor Lights (2018).mkv"
+    video.touch()
+    nfo = folder / "movie.nfo"
+    nfo.write_text(
+        "<movie><genre>Sci-Fi</genre><genre>Action</genre></movie>",
+        encoding="utf-8",
+    )
+    assert parse_genres_from_nfo_xml(nfo) == ["Sci-Fi", "Action"]
+    assert extract_movie_genres(video, use_nfo_xml=True) == ["Sci-Fi", "Action"]
+
+
+def test_scan_indexes_bloopers_as_extras(empty_client, tmp_path):
+    tv_root = Path(MEDIA_ROOTS[1]["path"])
+    extra = tv_root / "Mystery Manor" / "Bloopers" / "outtake.mkv"
+    extra.parent.mkdir(parents=True, exist_ok=True)
+    extra.touch()
+
+    try:
+        with Session(db.engine) as session:
+            scan_library(session, MEDIA_ROOTS)
+            show = session.exec(
+                select(Show).where(Show.title == "Mystery Manor")
+            ).first()
+            assert show is not None
+            extras = session.exec(
+                select(Episode).where(
+                    Episode.show_id == show.id,
+                    Episode.episode_kind == "supplemental",
+                )
+            ).all()
+            assert len(extras) == 1
+            assert extras[0].season == 0
+    finally:
+        if extra.exists():
+            extra.unlink()
+        if extra.parent.exists() and not any(extra.parent.iterdir()):
+            extra.parent.rmdir()
 
 
 def test_parse_episode_coerces_list_season_and_episode():

@@ -134,11 +134,24 @@ export default function ShowDetail() {
     }
   }
 
+  function seasonKey(season) {
+    return season.is_bonus ? 'bonus' : season.season
+  }
+
+  function seasonHeading(season) {
+    return season.label || `Season ${season.season}`
+  }
+
+  function isMainEpisode(ep) {
+    return ep.episode_kind !== 'supplemental'
+  }
+
   function findUpNext() {
     if (!show) return null
     let inProgress = null
     for (const season of show.seasons) {
       for (const ep of season.episodes) {
+        if (!isMainEpisode(ep)) continue
         if (!ep.watched && (ep.position_seconds ?? 0) >= 30) {
           if (
             !inProgress
@@ -152,6 +165,7 @@ export default function ShowDetail() {
     if (inProgress) return inProgress
     for (const season of show.seasons) {
       for (const ep of season.episodes) {
+        if (!isMainEpisode(ep)) continue
         if (!ep.watched) return ep
       }
     }
@@ -159,6 +173,12 @@ export default function ShowDetail() {
   }
 
   function episodePlayLabel(ep) {
+    if (!isMainEpisode(ep)) {
+      if ((ep.position_seconds ?? 0) >= 30) {
+        return `Resume ${ep.title || 'bonus'}`
+      }
+      return `Play ${ep.title || 'bonus'}`
+    }
     if ((ep.position_seconds ?? 0) >= 30) {
       return `Resume S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}`
     }
@@ -169,19 +189,20 @@ export default function ShowDetail() {
   useEffect(() => {
     if (show && show.seasons) {
       const initialExpanded = {}
-      show.seasons.forEach(season => {
-        // Default to collapsed if all episodes are watched, otherwise expanded
-        const allWatched = season.episodes.every(ep => ep.watched)
-        initialExpanded[season.season] = !allWatched
+      show.seasons.forEach((season) => {
+        const key = seasonKey(season)
+        const allWatched = season.episodes.every((ep) => ep.watched)
+        initialExpanded[key] = !allWatched
       })
       setExpandedSeasons(initialExpanded)
     }
   }, [show])
 
-  function toggleSeason(seasonNumber) {
-    setExpandedSeasons(prev => ({
+  function toggleSeason(season) {
+    const key = seasonKey(season)
+    setExpandedSeasons((prev) => ({
       ...prev,
-      [seasonNumber]: !prev[seasonNumber]
+      [key]: !prev[key],
     }))
   }
 
@@ -272,15 +293,22 @@ export default function ShowDetail() {
         </div>
       </div>
 
-      {show.seasons.map((season) => (
-        <section key={season.season} className="mb-8">
-          <div 
+      {show.seasons.map((season) => {
+        const key = seasonKey(season)
+        const expanded = expandedSeasons[key]
+        return (
+        <section
+          key={key}
+          className="mb-8"
+          data-testid={season.is_bonus ? 'show-season-bonus' : undefined}
+        >
+          <div
             className="flex flex-wrap items-center justify-between gap-3 mb-3 cursor-pointer"
-            onClick={() => toggleSeason(season.season)}
+            onClick={() => toggleSeason(season)}
           >
             <div className="flex items-center gap-2">
-              <svg 
-                className={`w-4 h-4 transition-transform ${expandedSeasons[season.season] ? 'rotate-90' : ''}`}
+              <svg
+                className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -289,10 +317,10 @@ export default function ShowDetail() {
                 <path d="M9 18l6-6-6-6" />
               </svg>
               <h2 className="text-lg font-semibold text-gray-300">
-                Season {season.season}
+                {seasonHeading(season)}
               </h2>
             </div>
-            {expandedSeasons[season.season] && (
+            {expanded && (
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -321,11 +349,11 @@ export default function ShowDetail() {
               </div>
             )}
           </div>
-          {expandedSeasons[season.season] && (
+          {expanded && (
             <div className="space-y-2">
               {season.episodes.map((ep) => {
                 const isPlaying = playingEpisodeId === ep.id
-                const isUpNext = upNext && upNext.id === ep.id
+                const isUpNext = upNext && upNext.id === ep.id && isMainEpisode(upNext)
                 const showRing = isPlaying || (Boolean(isUpNext) && playingEpisodeId == null)
                 const showProgress =
                   isPlaying ||
@@ -336,6 +364,7 @@ export default function ShowDetail() {
                     ? (playingProgressPercent ?? ep.progress_percent ?? 0)
                     : (ep.progress_percent ?? 0)
                 )
+                const isBonus = !isMainEpisode(ep)
                 return (
                   <div
                     key={ep.id}
@@ -367,16 +396,18 @@ export default function ShowDetail() {
                         />
                       ) : (
                         <div className="bg-couch-gray/50 border border-dashed border-gray-600 w-full h-9 rounded flex items-center justify-center text-xs text-gray-500">
-                          No thumbnail
+                          {isBonus ? 'Bonus' : 'No thumbnail'}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-mono text-gray-400 w-16 block">
-                        S{String(ep.season).padStart(2, '0')}E{String(ep.episode).padStart(2, '0')}
-                      </span>
+                      {!isBonus && (
+                        <span className="text-sm font-mono text-gray-400 w-16 block">
+                          S{String(ep.season).padStart(2, '0')}E{String(ep.episode).padStart(2, '0')}
+                        </span>
+                      )}
                       <span className="text-sm block truncate">
-                        {ep.title || `Episode ${ep.episode}`}
+                        {ep.title || (isBonus ? `Bonus ${ep.episode}` : `Episode ${ep.episode}`)}
                         {ep.has_subtitles && (
                           <span className="ml-2 text-xs text-gray-500">CC</span>
                         )}
@@ -428,7 +459,8 @@ export default function ShowDetail() {
             </div>
           )}
         </section>
-      ))}
+        )
+      })}
     </div>
   )
 }

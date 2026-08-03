@@ -118,9 +118,23 @@ def set_season_watch_status(
     watched: bool,
 ) -> list[int]:
     """Mark every episode in a season as watched or unwatched."""
-    episodes = session.exec(
-        select(Episode).where(Episode.show_id == show_id, Episode.season == season)
-    ).all()
+    from app.scan_config import BONUS_SEASON_DISPLAY
+
+    if season == BONUS_SEASON_DISPLAY:
+        episodes = session.exec(
+            select(Episode).where(
+                Episode.show_id == show_id,
+                Episode.episode_kind == "supplemental",
+            )
+        ).all()
+    else:
+        episodes = session.exec(
+            select(Episode).where(
+                Episode.show_id == show_id,
+                Episode.season == season,
+                Episode.episode_kind == "episode",
+            )
+        ).all()
     if not episodes:
         return []
 

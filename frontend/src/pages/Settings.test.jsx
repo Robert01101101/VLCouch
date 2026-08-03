@@ -73,6 +73,7 @@ describe('Settings', () => {
     render(<Settings scanning={false} onScan={vi.fn()} />)
     expect(await screen.findByTestId('settings-page')).toBeInTheDocument()
     expect(screen.getByTestId('settings-media-folders-section')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-library-structure-section')).toBeInTheDocument()
     expect(screen.getByTestId('settings-media-folders')).toBeInTheDocument()
     expect(screen.getByTestId('rescan-library')).toBeInTheDocument()
     expect(screen.getByTestId('settings-wikipedia-toggle')).toBeInTheDocument()

@@ -59,6 +59,11 @@ def _migrate_schema() -> None:
             if "file_size" not in episode_cols:
                 conn.execute(text("ALTER TABLE episode ADD COLUMN file_size INTEGER"))
                 conn.commit()
+            if "episode_kind" not in episode_cols:
+                conn.execute(
+                    text("ALTER TABLE episode ADD COLUMN episode_kind TEXT DEFAULT 'episode'")
+                )
+                conn.commit()
 
         wp_tables = conn.execute(
             text(

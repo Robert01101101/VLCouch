@@ -34,6 +34,7 @@ Add `data-testid` to new interactive elements:
 | VLC playlist advance toggle | `settings-vlc-playlist-advance-toggle` |
 | Scan on startup toggle | `settings-scan-on-startup-toggle` |
 | Browse row random toggle | `settings-browse-row-random-toggle` |
+| Show bonus content season | `show-season-bonus` |
 | Settings action error | `settings-action-error` |
 | Settings retry load | `settings-retry-load` |
 | Settings rescan prompt | `settings-rescan-prompt` |
@@ -71,6 +72,9 @@ Add `data-testid` to new interactive elements:
 | Scan for changes button (quick scan, default) | `rescan-library` |
 | Settings media folders list | `settings-media-folders` |
 | Settings media folders section | `settings-media-folders-section` |
+| Settings library structure section | `settings-library-structure-section` |
+| Settings library structure learn more | `settings-library-structure-learn-more` |
+| Settings library structure content | `settings-library-structure-content` |
 | Media row (empty slot) | `settings-media-row-{type}` |
 | Choose media folder | `settings-media-row-{type}-choose` |
 | Media root path (click to change) | `settings-media-root-{index}-path` |

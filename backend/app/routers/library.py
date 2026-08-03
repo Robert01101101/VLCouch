@@ -166,7 +166,10 @@ def list_shows(session: Session = Depends(get_session)):
     result = []
     for s in shows:
         episodes = session.exec(
-            select(Episode).where(Episode.show_id == s.id)
+            select(Episode).where(
+                Episode.show_id == s.id,
+                Episode.episode_kind == "episode",
+            )
         ).all()
         result.append(_show_card(s, len(episodes)))
     return result
@@ -201,7 +204,12 @@ def search_library(
 
     for show in shows:
         episode_count = len(
-            session.exec(select(Episode).where(Episode.show_id == show.id)).all()
+            session.exec(
+                select(Episode).where(
+                    Episode.show_id == show.id,
+                    Episode.episode_kind == "episode",
+                )
+            ).all()
         )
         card = _show_card(show, episode_count)
         card["item_type"] = "show"
@@ -238,7 +246,14 @@ def browse_home(
     # TV shows grouped by folder theme/category
     shows = session.exec(select(Show).order_by(Show.title)).all()
     episode_counts = {
-        show.id: len(session.exec(select(Episode).where(Episode.show_id == show.id)).all())
+        show.id: len(
+            session.exec(
+                select(Episode).where(
+                    Episode.show_id == show.id,
+                    Episode.episode_kind == "episode",
+                )
+            ).all()
+        )
         for show in shows
     }
     by_category: dict[str, list] = defaultdict(list)
@@ -349,6 +364,7 @@ def get_show(
         ).all()
 
         seasons: dict[int, list] = {}
+        bonus_episodes: list = []
         for ep in episodes:
             progress = session.exec(
                 select(WatchProgress).where(
@@ -364,16 +380,32 @@ def get_show(
                 "episode": ep.episode,
                 "title": ep.title,
                 "watched": watched,
+                "episode_kind": ep.episode_kind,
                 "has_subtitles": ep.subtitle_path is not None,
                 "thumbnail_url": _poster_url(ep.thumbnail_path) if ep.thumbnail_path else None,
                 **episode_progress_fields(progress),
             }
-            seasons.setdefault(ep.season, []).append(ep_data)
+            if ep.episode_kind == "supplemental":
+                bonus_episodes.append(ep_data)
+            else:
+                seasons.setdefault(ep.season, []).append(ep_data)
+
+        from app.scan_config import BONUS_SEASON_DISPLAY, BONUS_SEASON_LABEL
 
         season_list = [
             {"season": season_num, "episodes": eps}
             for season_num, eps in sorted(seasons.items())
         ]
+        if bonus_episodes:
+            bonus_episodes.sort(key=lambda item: (item["season"], item["episode"]))
+            season_list.append(
+                {
+                    "season": BONUS_SEASON_DISPLAY,
+                    "label": BONUS_SEASON_LABEL,
+                    "is_bonus": True,
+                    "episodes": bonus_episodes,
+                }
+            )
 
         if settings_store.auto_generate_thumbnails():
             queue_show_episode_thumbnails(show_id, background_tasks)
@@ -430,7 +462,10 @@ def _continue_watching_items(session: Session) -> list[dict]:
 
     for show in shows:
         episodes = session.exec(
-            select(Episode).where(Episode.show_id == show.id)
+            select(Episode).where(
+                Episode.show_id == show.id,
+                Episode.episode_kind == "episode",
+            )
         ).all()
         if not episodes:
             continue
@@ -476,7 +511,7 @@ def _continue_watching_items(session: Session) -> list[dict]:
 def _find_up_next_episode(session: Session, show_id: int) -> Episode | None:
     episodes = session.exec(
         select(Episode)
-        .where(Episode.show_id == show_id)
+        .where(Episode.show_id == show_id, Episode.episode_kind == "episode")
         .order_by(Episode.season, Episode.episode)
     ).all()
     for ep in episodes:
@@ -699,7 +734,12 @@ def _recently_watched_items(session: Session) -> list[dict]:
                 continue
             seen_shows.add(show.id)
             ep_count = len(
-                session.exec(select(Episode).where(Episode.show_id == show.id)).all()
+                session.exec(
+                    select(Episode).where(
+                        Episode.show_id == show.id,
+                        Episode.episode_kind == "episode",
+                    )
+                ).all()
             )
             card = _show_card(show, ep_count)
             card["item_type"] = "show"

@@ -1,25 +1,31 @@
 import logging
 from pathlib import Path
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.config import SCAN_LIMIT
-from app.genre_tags import extract_movie_genres, serialize_genres
+from app.genre_tags import extract_movie_genres, extract_show_category_from_folder, serialize_genres
 from app.models import Episode, Movie, Show, WatchProgress
+from app.scan_config import (
+    INDEX_BONUS_CONTENT,
+    PARSE_TV_FROM_PATH,
+    USE_GENRE_FOLDER_TAGS,
+    USE_GENRE_GUESSIT,
+    USE_GENRE_NFO_XML,
+)
 from app.scanner import (
-    extract_show_title_from_path,
-    extract_tv_category,
-    is_supplemental_content,
+    classify_tv_content,
+    is_supplemental_path,
     iter_video_files,
     normalize_title,
-    parse_episode,
+    parse_episode_context,
     parse_movie,
+    resolve_show_folder_path,
 )
 
 logger = logging.getLogger(__name__)
 
-# Batch commits during a scan instead of committing after every file to cut
-# down on SQLite fsyncs for large libraries.
 COMMIT_BATCH_SIZE = 50
 
 
@@ -29,12 +35,7 @@ def scan_library(
     limit: int | None = None,
     mode: str = "quick",
 ) -> dict:
-    """Scan all configured media roots and populate the database.
-
-    ``mode="quick"`` (default) skips guessit re-parsing and sidecar lookups for
-    files whose mtime/size match what's already stored. ``mode="full"`` always
-    re-parses every file.
-    """
+    """Scan all configured media roots and populate the database."""
     file_limit = limit if limit is not None else (SCAN_LIMIT if SCAN_LIMIT > 0 else None)
     skip_unchanged = mode != "full"
     stats = {
@@ -91,6 +92,14 @@ def _stat_file(video_path: Path) -> tuple[float | None, int | None]:
         return None, None
 
 
+def _genre_options() -> dict:
+    return {
+        "use_nfo_xml": USE_GENRE_NFO_XML,
+        "use_folder_tags": USE_GENRE_FOLDER_TAGS,
+        "use_guessit": USE_GENRE_GUESSIT,
+    }
+
+
 def _upsert_movie(
     session: Session,
     video_path: Path,
@@ -105,6 +114,8 @@ def _upsert_movie(
         select(Movie).where(Movie.file_path == file_path)
     ).first()
 
+    genre_kwargs = _genre_options()
+
     if existing:
         if (
             skip_unchanged
@@ -116,7 +127,7 @@ def _upsert_movie(
             return
 
         parsed = parse_movie(video_path)
-        genres = serialize_genres(extract_movie_genres(video_path, movies_root))
+        genres = serialize_genres(extract_movie_genres(video_path, movies_root, **genre_kwargs))
         existing.title = parsed["title"]
         existing.year = parsed["year"]
         existing.subtitle_path = parsed["subtitle_path"]
@@ -127,7 +138,7 @@ def _upsert_movie(
         return
 
     parsed = parse_movie(video_path)
-    genres = serialize_genres(extract_movie_genres(video_path, movies_root))
+    genres = serialize_genres(extract_movie_genres(video_path, movies_root, **genre_kwargs))
     normalized_title = normalize_title(parsed["title"])
 
     reconciled = None
@@ -163,7 +174,6 @@ def _upsert_movie(
 
 
 def _cleanup_orphaned_shows(session: Session) -> int:
-    """Remove shows left behind after episodes were reassigned to the correct show."""
     removed = 0
     for show in session.exec(select(Show)).all():
         episode_count = len(
@@ -178,10 +188,13 @@ def _cleanup_orphaned_shows(session: Session) -> int:
 
 
 def _cleanup_supplemental_episodes(session: Session) -> int:
-    """Remove episodes indexed from featurettes/deleted scenes before skip logic existed."""
+    """Remove legacy episode rows indexed from bonus-content paths before indexing was enabled."""
+    if INDEX_BONUS_CONTENT:
+        return 0
     removed = 0
     for episode in session.exec(select(Episode)).all():
-        if is_supplemental_content(Path(episode.file_path)):
+        path = Path(episode.file_path)
+        if episode.episode_kind == "supplemental" or is_supplemental_path(path):
             session.delete(episode)
             removed += 1
     if removed:
@@ -190,7 +203,6 @@ def _cleanup_supplemental_episodes(session: Session) -> int:
 
 
 def _cleanup_stale_paths(session: Session) -> int:
-    """Delete Movie/Episode rows whose file_path no longer exists on disk."""
     removed = 0
     for movie in session.exec(select(Movie)).all():
         if not Path(movie.file_path).exists():
@@ -217,6 +229,40 @@ def _delete_watch_progress(session: Session, item_type: str, item_id: int) -> No
         session.delete(progress)
 
 
+def _next_supplemental_episode_number(session: Session, show_id: int) -> int:
+    max_episode = session.exec(
+        select(func.max(Episode.episode)).where(
+            Episode.show_id == show_id,
+            Episode.season == 0,
+            Episode.episode_kind == "supplemental",
+        )
+    ).one()
+    return (max_episode or 0) + 1
+
+
+def _resolve_tv_category(
+    session: Session,
+    video_path: Path,
+    tv_root: Path,
+    show: Show | None,
+) -> str | None:
+    from app.scanner import extract_tv_category
+
+    bracket_category = extract_tv_category(video_path, tv_root)
+    if bracket_category:
+        return bracket_category
+
+    show_folder = resolve_show_folder_path(video_path, [tv_root])
+    if show_folder:
+        folder_category = extract_show_category_from_folder(show_folder)
+        if folder_category:
+            return folder_category
+
+    if show and show.category and show.category != "Unknown":
+        return show.category
+    return None
+
+
 def _upsert_episode(
     session: Session,
     video_path: Path,
@@ -224,7 +270,11 @@ def _upsert_episode(
     stats: dict,
     skip_unchanged: bool = True,
 ) -> None:
-    if is_supplemental_content(video_path):
+    classification = classify_tv_content(
+        video_path,
+        strict_supplemental_skip=not INDEX_BONUS_CONTENT,
+    )
+    if classification == "skip":
         existing = session.exec(
             select(Episode).where(Episode.file_path == str(video_path))
         ).first()
@@ -250,17 +300,22 @@ def _upsert_episode(
         stats["skipped_unchanged"] += 1
         return
 
-    folder_title = extract_show_title_from_path(video_path, tv_root)
-    parsed = parse_episode(video_path, show_title_override=folder_title)
+    parsed = parse_episode_context(
+        video_path,
+        tv_root,
+        prefer_folder_show_name=True,
+        parse_tv_from_path=PARSE_TV_FROM_PATH,
+        strict_supplemental_skip=not INDEX_BONUS_CONTENT,
+    )
     if not parsed:
         stats["skipped"] += 1
         return
 
-    category = extract_tv_category(video_path, tv_root)
-
     show = session.exec(
         select(Show).where(Show.normalized_title == parsed["normalized_title"])
     ).first()
+
+    category = _resolve_tv_category(session, video_path, tv_root, show)
 
     if not show:
         show = Show(
@@ -271,37 +326,52 @@ def _upsert_episode(
         session.add(show)
         session.flush()
         session.refresh(show)
-    elif category and not show.category:
+    elif category and (not show.category or show.category == "Unknown"):
         show.category = category
         session.add(show)
 
+    episode_kind = parsed.get("episode_kind", "episode")
+    season = parsed["season"]
+    episode_num = parsed["episode"]
+
+    if episode_kind == "supplemental" and episode_num is None:
+        episode_num = _next_supplemental_episode_number(session, show.id)
+
+    if season is None or episode_num is None:
+        stats["skipped"] += 1
+        return
+
     if existing:
         existing.show_id = show.id
-        existing.season = parsed["season"]
-        existing.episode = parsed["episode"]
+        existing.season = season
+        existing.episode = episode_num
         existing.title = parsed.get("episode_title")
         existing.subtitle_path = parsed["subtitle_path"]
+        existing.episode_kind = episode_kind
         existing.file_mtime = mtime
         existing.file_size = size
         session.add(existing)
         return
 
     reconciled = None
-    for candidate in session.exec(
-        select(Episode).where(
-            Episode.show_id == show.id,
-            Episode.season == parsed["season"],
-            Episode.episode == parsed["episode"],
-        )
-    ).all():
-        if not Path(candidate.file_path).exists():
-            reconciled = candidate
-            break
+    if episode_kind == "episode":
+        for candidate in session.exec(
+            select(Episode).where(
+                Episode.show_id == show.id,
+                Episode.season == season,
+                Episode.episode == episode_num,
+                Episode.episode_kind == "episode",
+            )
+        ).all():
+            if not Path(candidate.file_path).exists():
+                reconciled = candidate
+                break
 
     if reconciled:
         reconciled.file_path = file_path
         reconciled.subtitle_path = parsed["subtitle_path"]
         reconciled.title = parsed.get("episode_title")
+        reconciled.episode_kind = episode_kind
         reconciled.file_mtime = mtime
         reconciled.file_size = size
         session.add(reconciled)
@@ -310,11 +380,12 @@ def _upsert_episode(
 
     ep = Episode(
         show_id=show.id,
-        season=parsed["season"],
-        episode=parsed["episode"],
+        season=season,
+        episode=episode_num,
         title=parsed.get("episode_title"),
         file_path=file_path,
         subtitle_path=parsed["subtitle_path"],
+        episode_kind=episode_kind,
         file_mtime=mtime,
         file_size=size,
     )
