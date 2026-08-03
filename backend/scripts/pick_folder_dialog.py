@@ -19,6 +19,12 @@ ole32 = ctypes.windll.ole32
 BIF_RETURNONLYFSDIRS = 0x0001
 BIF_NEWDIALOGSTYLE = 0x0040
 
+# SHBrowseForFolderW (with BIF_NEWDIALOGSTYLE) creates shell namespace COM
+# objects that require a single-threaded apartment. COINIT_MULTITHREADED
+# makes the call silently return NULL (no dialog, no error) instead of
+# raising, which looks identical to the user cancelling.
+COINIT_APARTMENTTHREADED = 0x2
+
 DIALOG_TITLE_FRAGMENTS = (
     "browse for folder",
     "select folder",
@@ -112,7 +118,7 @@ def _pick_folder_path() -> str | None:
     bi = BROWSEINFOW()
     bi.lpszTitle = "Select a folder"
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
-    bi.pszDisplayName = display_name
+    bi.pszDisplayName = ctypes.cast(display_name, wintypes.LPWSTR)
 
     pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
     if not pidl:
@@ -128,7 +134,7 @@ def _pick_folder_path() -> str | None:
 
 
 def main() -> int:
-    ole32.CoInitializeEx(None, 0)
+    ole32.CoInitializeEx(None, COINIT_APARTMENTTHREADED)
     stop = threading.Event()
     worker = threading.Thread(target=_bring_picker_to_front, args=(stop,), daemon=True)
     worker.start()

@@ -13,6 +13,8 @@ class Movie(SQLModel, table=True):
     tmdb_id: int | None = None
     overview: str | None = None
     poster_path: str | None = None
+    file_mtime: float | None = None
+    file_size: int | None = None
 
 
 class Show(SQLModel, table=True):
@@ -34,6 +36,8 @@ class Episode(SQLModel, table=True):
     file_path: str = Field(unique=True, index=True)
     subtitle_path: str | None = None
     thumbnail_path: str | None = None
+    file_mtime: float | None = None
+    file_size: int | None = None
 
 
 class WatchProgress(SQLModel, table=True):

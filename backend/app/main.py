@@ -2,15 +2,14 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import BackgroundTasks, FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session as DBSession
 
 import app.db as db
-from app import settings_store
+from app import scan_state, settings_store
 from app.config import FRONTEND_DIST, POSTERS_DIR
-from app.library_scan import scan_library
 from app.playback_poller import start_poller, stop_poller
 from app.playback_service import sweep_stale_sessions
 from app.routers import library, play, settings, watch
@@ -21,24 +20,6 @@ from app.update_check import schedule_startup_check
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-_scan_state: dict = {"running": False, "last_stats": None}
-
-
-def _run_scan():
-    from sqlmodel import Session as DBSession
-
-    _scan_state["running"] = True
-    try:
-        logger.info("Starting full library scan (no file limit)...")
-        with DBSession(db.engine) as session:
-            stats = scan_library(session, settings_store.media_roots(), limit=0)
-        _scan_state["last_stats"] = stats
-        logger.info("Scan complete: %s", stats)
-        if settings_store.auto_generate_thumbnails():
-            queue_all_thumbnails_backfill()
-    finally:
-        _scan_state["running"] = False
 
 
 def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
@@ -58,7 +39,7 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
             else lifespan_scan
         )
         if should_scan:
-            _run_scan()
+            scan_state.run_scan(mode="quick")
         else:
             logger.info("Skipping startup scan")
             if settings_store.auto_generate_thumbnails():
@@ -85,17 +66,19 @@ def create_app(*, lifespan_scan: bool | None = None) -> FastAPI:
     application.mount("/posters", StaticFiles(directory=str(POSTERS_DIR)), name="posters")
 
     @application.post("/api/scan")
-    def trigger_scan(background_tasks: BackgroundTasks):
-        if _scan_state["running"]:
+    def trigger_scan(
+        background_tasks: BackgroundTasks,
+        mode: str = Query(default="quick", pattern="^(quick|full)$"),
+    ):
+        if not scan_state.start_background_scan(background_tasks, mode=mode):
             return {"status": "scan_already_running"}
-        background_tasks.add_task(_run_scan)
-        return {"status": "scan_started"}
+        return {"status": "scan_started", "mode": mode}
 
     @application.get("/api/scan/status")
     def scan_status():
         return {
-            "running": _scan_state["running"],
-            "last_stats": _scan_state["last_stats"],
+            "running": scan_state.is_scanning(),
+            "last_stats": scan_state.last_stats(),
         }
 
     @application.get("/api/thumbnails/status")

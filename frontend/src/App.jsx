@@ -28,10 +28,10 @@ export default function App() {
     }
   }, [])
 
-  async function handleScan() {
+  async function handleScan(mode = 'quick') {
     setScanning(true)
     try {
-      await triggerScan()
+      await triggerScan(mode)
       const status = await waitForScanComplete()
       setRefreshKey((key) => key + 1)
       return status
@@ -44,7 +44,7 @@ export default function App() {
 
   return (
     <div className={isDevMode ? "min-h-screen bg-couch-black" : "min-h-screen bg-couch-black"}>
-      <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-md px-6 py-3">
+      <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-md px-6 py-3 relative">
         <div className="flex items-center justify-between gap-6 max-w-[1920px] mx-auto">
           {isHome ? (
             <Link
@@ -92,8 +92,8 @@ export default function App() {
             <SearchBar />
           </div>
         </div>
+        <GlobalStatusBar />
       </header>
-      <GlobalStatusBar />
       <main>
         <Routes>
           <Route path="/" element={<Home refreshKey={refreshKey} scanning={scanning} onScan={handleScan} />} />

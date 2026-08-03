@@ -10,6 +10,11 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('settings-page')).toBeVisible()
     await expect(page.getByTestId('settings-media-folders')).toBeVisible()
     await expect(page.getByTestId('rescan-library')).toBeVisible()
+    await expect(page.getByTestId('settings-full-rescan')).toBeVisible()
+    await expect(page.getByTestId('settings-reset-app-data')).toBeVisible()
+    await page.getByTestId('settings-reset-app-data').click()
+    await expect(page.getByTestId('settings-danger-zone')).toBeVisible()
+    await expect(page.getByTestId('settings-reset-data')).toBeDisabled()
     await expect(page.getByTestId('settings-wikipedia-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-scan-on-startup-toggle')).toBeVisible()
     await expect(page.getByTestId('settings-browse-row-random-toggle')).toBeVisible()
@@ -30,8 +35,13 @@ test.describe('Settings page', () => {
     await page.goto('/settings')
     await expect(page.getByTestId('page-loading')).toBeHidden({ timeout: 15000 })
     const rescan = page.getByTestId('rescan-library')
+    const scanRequest = page.waitForResponse(
+      (r) => r.url().includes('/api/scan') && r.request().method() === 'POST'
+    )
     await rescan.click()
-    await expect(rescan).toHaveText('Scanning...')
-    await expect(rescan).toHaveText('Rescan Library', { timeout: 10000 })
+    await scanRequest
+    await expect(rescan).toBeDisabled({ timeout: 5000 })
+    await expect(rescan).toBeEnabled({ timeout: 10000 })
+    await expect(rescan).toHaveText('Scan for changes')
   })
 })

@@ -61,8 +61,13 @@ def pick_folder() -> PickFolderResult:
             error="Folder picker failed to open",
         )
 
-    if result.returncode != 0 and result.stderr.strip():
-        logger.warning("Folder picker stderr: %s", result.stderr.strip())
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit code {result.returncode}"
+        logger.warning("Folder picker failed: %s", detail)
+        return PickFolderResult(
+            available=False,
+            error="Folder picker failed to open",
+        )
 
     path = result.stdout.strip()
     if not path:

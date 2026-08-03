@@ -126,8 +126,9 @@ export async function setShowWatchStatus(showId, watched) {
   return res.json()
 }
 
-export async function triggerScan() {
-  const res = await fetch(`${API_BASE}/api/scan`, { method: 'POST' })
+export async function triggerScan(mode = 'quick') {
+  const params = new URLSearchParams({ mode })
+  const res = await fetch(`${API_BASE}/api/scan?${params}`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to start scan')
   return res.json()
 }
@@ -146,16 +147,29 @@ export async function fetchThumbnailStatus() {
 
 /** Poll until background scan finishes (full library scans can take a while). */
 export async function waitForScanComplete({
-  pollMs = 2000,
+  pollMs = 200,
+  startTimeoutMs = 500,
   timeoutMs = 300000,
 } = {}) {
   const deadline = Date.now() + timeoutMs
+  const startDeadline = Date.now() + startTimeoutMs
+  let sawRunning = false
+
   while (Date.now() < deadline) {
     const status = await fetchScanStatus()
-    if (!status.running) {
+    if (status.running) {
+      sawRunning = true
+    }
+    if (sawRunning && !status.running) {
       return status
     }
-    await new Promise((resolve) => setTimeout(resolve, pollMs))
+    // Very fast scans can finish before the first poll; after a short grace
+    // period accept idle status so the UI does not stay stuck on "Scanning...".
+    if (!sawRunning && !status.running && Date.now() > startDeadline) {
+      return status
+    }
+    const delay = sawRunning ? pollMs : Math.min(pollMs, 50)
+    await new Promise((resolve) => setTimeout(resolve, delay))
   }
   throw new Error('Scan timed out')
 }
@@ -207,6 +221,15 @@ export async function pickMediaFolder() {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.detail || 'Failed to open folder picker')
+  }
+  return res.json()
+}
+
+export async function resetData() {
+  const res = await fetch(`${API_BASE}/api/settings/reset-data`, { method: 'POST' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || 'Failed to reset data')
   }
   return res.json()
 }

@@ -13,9 +13,14 @@ test.describe('Home page', () => {
     await page.goto('/settings')
     await expect(page.getByTestId('page-loading')).toBeHidden({ timeout: 15000 })
     const rescan = page.getByTestId('rescan-library')
+    const scanRequest = page.waitForResponse(
+      (r) => r.url().includes('/api/scan') && r.request().method() === 'POST'
+    )
     await rescan.click()
-    await expect(rescan).toHaveText('Scanning...')
-    await expect(rescan).toHaveText('Rescan Library', { timeout: 10000 })
+    await scanRequest
+    await expect(rescan).toBeDisabled({ timeout: 5000 })
+    await expect(rescan).toBeEnabled({ timeout: 10000 })
+    await expect(rescan).toHaveText('Scan for changes')
   })
 
   test('search finds library items', async ({ page }) => {

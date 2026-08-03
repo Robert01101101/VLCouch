@@ -16,7 +16,7 @@ Scans folders on your PC, builds poster rows and a hero banner, and launches [VL
 - **TV** — seasons, episodes, watch progress, binge playlists in VLC
 - **Movies** — decade/genre rows; optional sidecar genre tags (see below)
 - **Thumbnails** — extracted locally via ffmpeg (~3 min in); all-media backfill on by default
-- **Settings** — media folders, rescan, thumbnail mode, VLC options, optional Wikipedia plots; install VLC/ffmpeg via winget on Windows
+- **Settings** — media folders, quick/full scan, thumbnail mode, VLC options, optional Wikipedia plots, danger-zone data reset; install VLC/ffmpeg via winget on Windows
 
 ---
 
@@ -25,7 +25,7 @@ Scans folders on your PC, builds poster rows and a hero banner, and launches [VL
 ### Windows (recommended)
 
 1. Download **[VLCouchSetup.exe](https://github.com/Robert01101101/VLCouch/releases/latest/download/VLCouchSetup.exe)** (always the latest release).
-2. Launch **VLCouch** from the Start menu → add movie/TV folders → **Rescan Library**.
+2. Launch **VLCouch** from the Start menu → add movie/TV folders → **Scan for changes**.
 
 You also need [VLC](https://www.videolan.org/) (playback) and [ffmpeg](https://ffmpeg.org/) (thumbnails). On Windows, **Settings** shows their status and offers **Install (winget)** when available, or a download link otherwise.
 
@@ -52,7 +52,7 @@ cd frontend && npm install && npm run build && cd ..
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir backend
 ```
 
-Open http://127.0.0.1:8000 → **Settings** → **Rescan Library**. Type folder paths manually (no native picker). Set `VLC_PATH` / `FFMPEG_PATH` in `.env` if not on `PATH`.
+Open http://127.0.0.1:8000 → **Settings** → **Scan for changes**. Type folder paths manually (no native picker). Set `VLC_PATH` / `FFMPEG_PATH` in `.env` if not on `PATH`.
 
 ### Development
 
